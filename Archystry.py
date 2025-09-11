@@ -1,12 +1,12 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
 import json
 import uuid
 from typing import Dict, List, Any
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import numpy as np
 
 # Page config
 st.set_page_config(
@@ -63,54 +63,62 @@ def initialize_session_state():
 # Domain definitions based on the canvas
 DOMAINS = {
     'Enterprise Domain': {
-        'position': (0, 0),
+        'position': (5, 8),
+        'size': (3, 1),
         'subdomains': {
-            'Business Value': {'position': (1, 1), 'id': 'AEF:LOC:0039'},
-            'Financial Value': {'position': (0.5, 1), 'id': 'AEF:LOC:0040'},
-            'Social Impact': {'position': (1.5, 1), 'id': 'AEF:LOC:0041'}
+            'Business Value': {'position': (4, 7), 'id': 'AEF:LOC:0039'},
+            'Financial Value': {'position': (3, 7), 'id': 'AEF:LOC:0040'},
+            'Social Impact': {'position': (5, 7), 'id': 'AEF:LOC:0041'}
         }
     },
     'Products': {
-        'position': (0, 2),
+        'position': (1, 5),
+        'size': (1.5, 0.8),
         'id': 'AEF:LOC:0006',
         'subdomains': {}
     },
     'Services': {
-        'position': (1, 2),
+        'position': (3.5, 5),
+        'size': (1.5, 0.8),
         'id': 'AEF:LOC:0002',
         'subdomains': {}
     },
     'Information': {
-        'position': (2, 2),
+        'position': (6, 5),
+        'size': (1.5, 0.8),
         'id': 'AEF:LOC:0003',
         'subdomains': {}
     },
     'People': {
-        'position': (0, 3),
+        'position': (1, 3),
+        'size': (1.5, 0.8),
         'id': 'AEF:LOC:0004',
         'subdomains': {
-            'Customer': {'position': (0, 3.3)},
-            'User': {'position': (0.2, 3.3)},
-            'Admin': {'position': (0.4, 3.3)}
+            'Customer': {'position': (0.5, 2.2)},
+            'User': {'position': (1, 2.2)},
+            'Admin': {'position': (1.5, 2.2)}
         }
     },
     'Process': {
-        'position': (1, 3),
+        'position': (3.5, 3),
+        'size': (1.5, 0.8),
         'id': 'AEF:LOC:0005',
         'subdomains': {}
     },
     'Facilities': {
-        'position': (2, 3),
+        'position': (6, 3),
+        'size': (1.5, 0.8),
         'id': 'AEF:LOC:0007',
         'subdomains': {}
     },
     'Information Technology': {
-        'position': (1, 4),
+        'position': (3.5, 1),
+        'size': (3, 0.6),
         'subdomains': {
-            'Applications': {'position': (0.5, 4.3), 'id': 'AEF:LOC:0016'},
-            'Platforms': {'position': (1, 4.3), 'id': 'AEF:LOC:0017'},
-            'Network': {'position': (1.5, 4.3), 'id': 'AEF:LOC:0018'},
-            'Data': {'position': (2, 4.3), 'id': 'AEF:LOC:0019'}
+            'Applications': {'position': (2.5, 0.3), 'id': 'AEF:LOC:0016'},
+            'Platforms': {'position': (3.5, 0.3), 'id': 'AEF:LOC:0017'},
+            'Network': {'position': (4.5, 0.3), 'id': 'AEF:LOC:0018'},
+            'Data': {'position': (5.5, 0.3), 'id': 'AEF:LOC:0019'}
         }
     }
 }
@@ -129,133 +137,145 @@ INTERACTIONS = [
 ]
 
 def create_canvas_visualization(project_data=None):
-    """Create the security architecture canvas visualization"""
-    fig = go.Figure()
+    """Create the security architecture canvas visualization using matplotlib"""
+    fig, ax = plt.subplots(figsize=(12, 10))
+    
+    # Set up the plot
+    ax.set_xlim(0, 8)
+    ax.set_ylim(0, 9)
+    ax.set_aspect('equal')
+    ax.axis('off')
     
     # Add domain boxes
     for domain_name, domain_info in DOMAINS.items():
         x, y = domain_info['position']
+        width, height = domain_info.get('size', (1.5, 0.8))
         
         # Main domain box
-        fig.add_shape(
-            type="rect",
-            x0=x-0.4, y0=y-0.3, x1=x+0.4, y1=y+0.3,
-            line=dict(color="black", width=2),
-            fillcolor="lightblue",
-            opacity=0.7
+        rect = patches.Rectangle(
+            (x - width/2, y - height/2), width, height,
+            linewidth=2, edgecolor='black', facecolor='lightblue', alpha=0.7
         )
+        ax.add_patch(rect)
         
         # Domain label
         domain_id = domain_info.get('id', '')
-        label_text = f"{domain_id}<br>{domain_name}" if domain_id else domain_name
+        label_text = f"{domain_id}\n{domain_name}" if domain_id else domain_name
         
-        fig.add_annotation(
-            x=x, y=y,
-            text=label_text,
-            showarrow=False,
-            font=dict(size=10, color="black"),
-            bgcolor="white",
-            bordercolor="black",
-            borderwidth=1
-        )
+        ax.text(x, y, label_text, ha='center', va='center', 
+                fontsize=8, weight='bold', 
+                bbox=dict(boxstyle='round,pad=0.2', facecolor='white', edgecolor='black'))
         
         # Add subdomains
         for subdomain_name, subdomain_info in domain_info.get('subdomains', {}).items():
             sx, sy = subdomain_info['position']
             
             # Subdomain box
-            fig.add_shape(
-                type="rect",
-                x0=sx-0.3, y0=sy-0.2, x1=sx+0.3, y1=sy+0.2,
-                line=dict(color="gray", width=1),
-                fillcolor="lightgreen",
-                opacity=0.6
+            sub_rect = patches.Rectangle(
+                (sx - 0.4, sy - 0.25), 0.8, 0.5,
+                linewidth=1, edgecolor='gray', facecolor='lightgreen', alpha=0.6
             )
+            ax.add_patch(sub_rect)
             
             subdomain_id = subdomain_info.get('id', '')
-            sub_label = f"{subdomain_id}<br>{subdomain_name}" if subdomain_id else subdomain_name
+            sub_label = f"{subdomain_id}\n{subdomain_name}" if subdomain_id else subdomain_name
             
-            fig.add_annotation(
-                x=sx, y=sy,
-                text=sub_label,
-                showarrow=False,
-                font=dict(size=8, color="black"),
-                bgcolor="white",
-                bordercolor="gray",
-                borderwidth=1
-            )
+            ax.text(sx, sy, sub_label, ha='center', va='center', 
+                    fontsize=6, 
+                    bbox=dict(boxstyle='round,pad=0.1', facecolor='white', edgecolor='gray'))
     
     # Add risks and mitigations if project data is provided
     if project_data and 'selected_interactions' in project_data:
         risk_counter = 0
         mitigation_counter = 0
         
+        # Add risks for selected interactions
         for interaction in project_data['selected_interactions']:
-            # Add risks for this interaction
             project_risks = [r for r, info in project_data.get('risks', {}).items() 
                            if info.get('interaction') == interaction]
             
             for risk_id in project_risks:
                 risk_counter += 1
-                # Position risks near relevant domains
-                risk_x = 0.5 + (risk_counter * 0.2)
-                risk_y = 1.5
+                risk_x = 1.5 + (risk_counter * 0.7)
+                risk_y = 6.5
                 
-                fig.add_shape(
-                    type="rect",
-                    x0=risk_x-0.1, y0=risk_y-0.1, x1=risk_x+0.1, y1=risk_y+0.1,
-                    line=dict(color="red", width=2),
-                    fillcolor="orange",
-                    opacity=0.8
+                # Risk box
+                risk_rect = patches.Rectangle(
+                    (risk_x - 0.2, risk_y - 0.15), 0.4, 0.3,
+                    linewidth=2, edgecolor='red', facecolor='orange', alpha=0.8
                 )
+                ax.add_patch(risk_rect)
                 
-                fig.add_annotation(
-                    x=risk_x, y=risk_y,
-                    text=risk_id,
-                    showarrow=False,
-                    font=dict(size=8, color="black", family="Arial Black"),
-                    bgcolor="orange",
-                    bordercolor="red",
-                    borderwidth=1
-                )
+                ax.text(risk_x, risk_y, risk_id, ha='center', va='center', 
+                        fontsize=8, weight='bold', color='black')
+        
+        # Add mitigations
+        for mit_id in project_data.get('mitigations', {}).keys():
+            mitigation_counter += 1
+            mit_x = 1 + (mitigation_counter * 0.7)
+            mit_y = 6
             
-            # Add mitigations
-            project_mitigations = [m for m, info in project_data.get('mitigations', {}).items()]
+            # Mitigation box
+            mit_rect = patches.Rectangle(
+                (mit_x - 0.2, mit_y - 0.15), 0.4, 0.3,
+                linewidth=2, edgecolor='green', facecolor='lightgreen', alpha=0.8
+            )
+            ax.add_patch(mit_rect)
             
-            for mit_id in project_mitigations:
-                mitigation_counter += 1
-                mit_x = 0.3 + (mitigation_counter * 0.2)
-                mit_y = 1.2
-                
-                fig.add_shape(
-                    type="rect",
-                    x0=mit_x-0.1, y0=mit_y-0.1, x1=mit_x+0.1, y1=mit_y+0.1,
-                    line=dict(color="green", width=2),
-                    fillcolor="lightgreen",
-                    opacity=0.8
-                )
-                
-                fig.add_annotation(
-                    x=mit_x, y=mit_y,
-                    text=mit_id,
-                    showarrow=False,
-                    font=dict(size=8, color="black", family="Arial Black"),
-                    bgcolor="lightgreen",
-                    bordercolor="green",
-                    borderwidth=1
-                )
+            ax.text(mit_x, mit_y, mit_id, ha='center', va='center', 
+                    fontsize=8, weight='bold', color='black')
     
-    # Update layout
-    fig.update_layout(
-        title="Security Architecture Canvas",
-        xaxis=dict(range=[-1, 3], showgrid=False, showticklabels=False),
-        yaxis=dict(range=[0, 5], showgrid=False, showticklabels=False),
-        height=600,
-        showlegend=False,
-        plot_bgcolor='white',
-        paper_bgcolor='white'
-    )
+    plt.title("Security Architecture Canvas", fontsize=16, weight='bold', pad=20)
+    return fig
+
+def create_pie_chart(data, labels, title):
+    """Create a pie chart using matplotlib"""
+    fig, ax = plt.subplots(figsize=(8, 6))
     
+    # Only create pie chart if there's data
+    if sum(data) > 0:
+        colors = ['#ff9999', '#66b3ff', '#99ff99', '#ffcc99']
+        wedges, texts, autotexts = ax.pie(data, labels=labels, autopct='%1.1f%%', 
+                                         colors=colors[:len(data)], startangle=90)
+        
+        # Enhance text
+        for autotext in autotexts:
+            autotext.set_color('black')
+            autotext.set_weight('bold')
+    else:
+        ax.text(0.5, 0.5, 'No Data Available', ha='center', va='center', 
+                transform=ax.transAxes, fontsize=14)
+    
+    ax.set_title(title, fontsize=14, weight='bold')
+    return fig
+
+def create_bar_chart(df, x_col, y_cols, title):
+    """Create a bar chart using matplotlib"""
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    if not df.empty:
+        x = np.arange(len(df[x_col]))
+        width = 0.35
+        
+        if len(y_cols) == 2:
+            ax.bar(x - width/2, df[y_cols[0]], width, label=y_cols[0], alpha=0.8)
+            ax.bar(x + width/2, df[y_cols[1]], width, label=y_cols[1], alpha=0.8)
+        else:
+            ax.bar(x, df[y_cols[0]], width, label=y_cols[0], alpha=0.8)
+        
+        ax.set_xlabel(x_col)
+        ax.set_ylabel('Count')
+        ax.set_title(title)
+        ax.set_xticks(x)
+        ax.set_xticklabels(df[x_col], rotation=45, ha='right')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+    else:
+        ax.text(0.5, 0.5, 'No Data Available', ha='center', va='center', 
+                transform=ax.transAxes, fontsize=14)
+        ax.set_title(title)
+    
+    plt.tight_layout()
     return fig
 
 def admin_section():
@@ -509,7 +529,7 @@ def project_management():
         # Canvas visualization
         st.subheader("🖼️ Security Architecture Canvas")
         canvas_fig = create_canvas_visualization(project_data)
-        st.plotly_chart(canvas_fig, use_container_width=True)
+        st.pyplot(canvas_fig, use_container_width=True)
 
 def dashboard():
     """Dashboard showing project statistics"""
@@ -536,21 +556,14 @@ def dashboard():
         st.metric("Closed Projects", closed_projects)
     
     # Project status distribution
-    status_data = {
-        'Status': ['Open', 'In Progress', 'Closed'],
-        'Count': [open_projects, in_progress_projects, closed_projects]
-    }
+    status_counts = [open_projects, in_progress_projects, closed_projects]
+    status_labels = ['Open', 'In Progress', 'Closed']
     
     col1, col2 = st.columns(2)
     
     with col1:
-        fig_status = px.pie(
-            status_data, 
-            values='Count', 
-            names='Status',
-            title="Project Status Distribution"
-        )
-        st.plotly_chart(fig_status, use_container_width=True)
+        fig_status = create_pie_chart(status_counts, status_labels, "Project Status Distribution")
+        st.pyplot(fig_status, use_container_width=True)
     
     with col2:
         # Risk and mitigation statistics per project
@@ -572,14 +585,13 @@ def dashboard():
         
         if project_stats:
             stats_df = pd.DataFrame(project_stats)
-            fig_risks = px.bar(
+            fig_risks = create_bar_chart(
                 stats_df, 
-                x='Project', 
-                y=['Open Risks', 'Open Mitigations'],
-                title="Open Risks & Mitigations by Project",
-                barmode='group'
+                'Project', 
+                ['Open Risks', 'Open Mitigations'],
+                "Open Risks & Mitigations by Project"
             )
-            st.plotly_chart(fig_risks, use_container_width=True)
+            st.pyplot(fig_risks, use_container_width=True)
     
     # Detailed project table
     st.subheader("Project Details")
@@ -587,7 +599,7 @@ def dashboard():
         detailed_df = pd.DataFrame(project_stats)
         st.dataframe(detailed_df, use_container_width=True)
     
-    # Risk heat map
+    # Risk impact analysis
     st.subheader("Risk Impact Analysis")
     if st.session_state.risks:
         risk_impact_data = []
@@ -608,16 +620,7 @@ def dashboard():
         
         if risk_impact_data:
             risk_df = pd.DataFrame(risk_impact_data)
-            fig_heatmap = px.scatter(
-                risk_df,
-                x='Projects Affected',
-                y='Impact Score',
-                size='Impact Score',
-                color='Domain',
-                hover_data=['Risk ID', 'Impact Level'],
-                title="Risk Impact vs Project Coverage"
-            )
-            st.plotly_chart(fig_heatmap, use_container_width=True)
+            st.dataframe(risk_df, use_container_width=True)
 
 def main():
     """Main application function"""
