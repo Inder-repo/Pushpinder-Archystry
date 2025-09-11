@@ -4,9 +4,6 @@ from datetime import datetime
 import json
 import uuid
 from typing import Dict, List, Any
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import numpy as np
 
 # Page config
 st.set_page_config(
@@ -63,62 +60,62 @@ def initialize_session_state():
 # Domain definitions based on the canvas
 DOMAINS = {
     'Enterprise Domain': {
-        'position': (5, 8),
-        'size': (3, 1),
+        'level': 1,
+        'color': '#E8F4FD',
         'subdomains': {
-            'Business Value': {'position': (4, 7), 'id': 'AEF:LOC:0039'},
-            'Financial Value': {'position': (3, 7), 'id': 'AEF:LOC:0040'},
-            'Social Impact': {'position': (5, 7), 'id': 'AEF:LOC:0041'}
+            'Business Value': {'id': 'AEF:LOC:0039', 'color': '#B3E5FC'},
+            'Financial Value': {'id': 'AEF:LOC:0040', 'color': '#B3E5FC'},
+            'Social Impact': {'id': 'AEF:LOC:0041', 'color': '#B3E5FC'}
         }
     },
     'Products': {
-        'position': (1, 5),
-        'size': (1.5, 0.8),
+        'level': 2,
+        'color': '#FFF3E0',
         'id': 'AEF:LOC:0006',
         'subdomains': {}
     },
     'Services': {
-        'position': (3.5, 5),
-        'size': (1.5, 0.8),
+        'level': 2,
+        'color': '#FFF3E0',
         'id': 'AEF:LOC:0002',
         'subdomains': {}
     },
     'Information': {
-        'position': (6, 5),
-        'size': (1.5, 0.8),
+        'level': 2,
+        'color': '#FFF3E0',
         'id': 'AEF:LOC:0003',
         'subdomains': {}
     },
     'People': {
-        'position': (1, 3),
-        'size': (1.5, 0.8),
+        'level': 3,
+        'color': '#F3E5F5',
         'id': 'AEF:LOC:0004',
         'subdomains': {
-            'Customer': {'position': (0.5, 2.2)},
-            'User': {'position': (1, 2.2)},
-            'Admin': {'position': (1.5, 2.2)}
+            'Customer': {'color': '#E1BEE7'},
+            'User': {'color': '#E1BEE7'},
+            'Admin': {'color': '#E1BEE7'}
         }
     },
     'Process': {
-        'position': (3.5, 3),
-        'size': (1.5, 0.8),
+        'level': 3,
+        'color': '#F3E5F5',
         'id': 'AEF:LOC:0005',
         'subdomains': {}
     },
     'Facilities': {
-        'position': (6, 3),
-        'size': (1.5, 0.8),
+        'level': 3,
+        'color': '#F3E5F5',
         'id': 'AEF:LOC:0007',
         'subdomains': {}
     },
     'Information Technology': {
-        'position': (3.5, 1),
-        'size': (3, 0.6),
+        'level': 4,
+        'color': '#E8F5E8',
         'subdomains': {
-            'Applications': {'position': (2.5, 0.3), 'id': 'AEF:LOC:0016'},
-            'Platforms': {'position': (3.5, 0.3), 'id': 'AEF:LOC:0017'},
-            'Network': {'position': (4.5, 0.3), 'id': 'AEF:LOC:0018'},
-            'Data': {'position': (5.5, 0.3), 'id': 'AEF:LOC:0019'}
+            'Applications': {'id': 'AEF:LOC:0016', 'color': '#C8E6C9'},
+            'Platforms': {'id': 'AEF:LOC:0017', 'color': '#C8E6C9'},
+            'Network': {'id': 'AEF:LOC:0018', 'color': '#C8E6C9'},
+            'Data': {'id': 'AEF:LOC:0019', 'color': '#C8E6C9'}
         }
     }
 }
@@ -136,147 +133,211 @@ INTERACTIONS = [
     'Information -> People'
 ]
 
-def create_canvas_visualization(project_data=None):
-    """Create the security architecture canvas visualization using matplotlib"""
-    fig, ax = plt.subplots(figsize=(12, 10))
+def display_canvas_text_based(project_data=None):
+    """Display the security architecture canvas in text-based format"""
+    st.markdown("### 🏗️ Security Architecture Canvas")
     
-    # Set up the plot
-    ax.set_xlim(0, 8)
-    ax.set_ylim(0, 9)
-    ax.set_aspect('equal')
-    ax.axis('off')
+    # Enterprise Domain (Top Level)
+    st.markdown("---")
+    st.markdown("#### 🏢 Enterprise Domain (AEF:LOC:0000)")
     
-    # Add domain boxes
-    for domain_name, domain_info in DOMAINS.items():
-        x, y = domain_info['position']
-        width, height = domain_info.get('size', (1.5, 0.8))
-        
-        # Main domain box
-        rect = patches.Rectangle(
-            (x - width/2, y - height/2), width, height,
-            linewidth=2, edgecolor='black', facecolor='lightblue', alpha=0.7
-        )
-        ax.add_patch(rect)
-        
-        # Domain label
-        domain_id = domain_info.get('id', '')
-        label_text = f"{domain_id}\n{domain_name}" if domain_id else domain_name
-        
-        ax.text(x, y, label_text, ha='center', va='center', 
-                fontsize=8, weight='bold', 
-                bbox=dict(boxstyle='round,pad=0.2', facecolor='white', edgecolor='black'))
-        
-        # Add subdomains
-        for subdomain_name, subdomain_info in domain_info.get('subdomains', {}).items():
-            sx, sy = subdomain_info['position']
-            
-            # Subdomain box
-            sub_rect = patches.Rectangle(
-                (sx - 0.4, sy - 0.25), 0.8, 0.5,
-                linewidth=1, edgecolor='gray', facecolor='lightgreen', alpha=0.6
-            )
-            ax.add_patch(sub_rect)
-            
-            subdomain_id = subdomain_info.get('id', '')
-            sub_label = f"{subdomain_id}\n{subdomain_name}" if subdomain_id else subdomain_name
-            
-            ax.text(sx, sy, sub_label, ha='center', va='center', 
-                    fontsize=6, 
-                    bbox=dict(boxstyle='round,pad=0.1', facecolor='white', edgecolor='gray'))
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown("""
+        <div style='background-color: #B3E5FC; padding: 15px; border-radius: 10px; border: 2px solid #0288D1; text-align: center;'>
+            <strong>AEF:LOC:0040</strong><br>
+            <strong>Financial Value</strong>
+        </div>
+        """, unsafe_allow_html=True)
     
-    # Add risks and mitigations if project data is provided
-    if project_data and 'selected_interactions' in project_data:
-        risk_counter = 0
-        mitigation_counter = 0
+    with col2:
+        st.markdown("""
+        <div style='background-color: #B3E5FC; padding: 15px; border-radius: 10px; border: 2px solid #0288D1; text-align: center;'>
+            <strong>AEF:LOC:0039</strong><br>
+            <strong>Business Value</strong>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown("""
+        <div style='background-color: #B3E5FC; padding: 15px; border-radius: 10px; border: 2px solid #0288D1; text-align: center;'>
+            <strong>AEF:LOC:0041</strong><br>
+            <strong>Social Impact</strong>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Business Layer
+    st.markdown("#### 📋 Business Layer")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        <div style='background-color: #FFF3E0; padding: 15px; border-radius: 10px; border: 2px solid #FF9800; text-align: center;'>
+            <strong>AEF:LOC:0006</strong><br>
+            <strong>Products</strong>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+        <div style='background-color: #FFF3E0; padding: 15px; border-radius: 10px; border: 2px solid #FF9800; text-align: center;'>
+            <strong>AEF:LOC:0002</strong><br>
+            <strong>Services</strong>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown("""
+        <div style='background-color: #FFF3E0; padding: 15px; border-radius: 10px; border: 2px solid #FF9800; text-align: center;'>
+            <strong>AEF:LOC:0003</strong><br>
+            <strong>Information</strong>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Operational Layer
+    st.markdown("#### ⚙️ Operational Layer")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        <div style='background-color: #F3E5F5; padding: 15px; border-radius: 10px; border: 2px solid #9C27B0; text-align: center;'>
+            <strong>AEF:LOC:0004</strong><br>
+            <strong>People</strong>
+        </div>
+        """, unsafe_allow_html=True)
         
-        # Add risks for selected interactions
-        for interaction in project_data['selected_interactions']:
-            project_risks = [r for r, info in project_data.get('risks', {}).items() 
-                           if info.get('interaction') == interaction]
-            
-            for risk_id in project_risks:
-                risk_counter += 1
-                risk_x = 1.5 + (risk_counter * 0.7)
-                risk_y = 6.5
+        # People subdomains
+        st.markdown("<div style='margin-top: 10px;'>", unsafe_allow_html=True)
+        subcol1, subcol2, subcol3 = st.columns(3)
+        with subcol1:
+            st.markdown("""
+            <div style='background-color: #E1BEE7; padding: 8px; border-radius: 5px; border: 1px solid #9C27B0; text-align: center; font-size: 12px;'>
+                <strong>Customer</strong>
+            </div>
+            """, unsafe_allow_html=True)
+        with subcol2:
+            st.markdown("""
+            <div style='background-color: #E1BEE7; padding: 8px; border-radius: 5px; border: 1px solid #9C27B0; text-align: center; font-size: 12px;'>
+                <strong>User</strong>
+            </div>
+            """, unsafe_allow_html=True)
+        with subcol3:
+            st.markdown("""
+            <div style='background-color: #E1BEE7; padding: 8px; border-radius: 5px; border: 1px solid #9C27B0; text-align: center; font-size: 12px;'>
+                <strong>Admin</strong>
+            </div>
+            """, unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+        <div style='background-color: #F3E5F5; padding: 15px; border-radius: 10px; border: 2px solid #9C27B0; text-align: center;'>
+            <strong>AEF:LOC:0005</strong><br>
+            <strong>Process</strong>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown("""
+        <div style='background-color: #F3E5F5; padding: 15px; border-radius: 10px; border: 2px solid #9C27B0; text-align: center;'>
+            <strong>AEF:LOC:0007</strong><br>
+            <strong>Facilities</strong>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Technology Layer
+    st.markdown("#### 💻 Information Technology Layer")
+    st.markdown("""
+    <div style='background-color: #E8F5E8; padding: 15px; border-radius: 10px; border: 2px solid #4CAF50; text-align: center; margin-bottom: 15px;'>
+        <strong>Information Technology</strong>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.markdown("""
+        <div style='background-color: #C8E6C9; padding: 15px; border-radius: 10px; border: 2px solid #4CAF50; text-align: center;'>
+            <strong>AEF:LOC:0016</strong><br>
+            <strong>Applications</strong>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+        <div style='background-color: #C8E6C9; padding: 15px; border-radius: 10px; border: 2px solid #4CAF50; text-align: center;'>
+            <strong>AEF:LOC:0017</strong><br>
+            <strong>Platforms</strong>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown("""
+        <div style='background-color: #C8E6C9; padding: 15px; border-radius: 10px; border: 2px solid #4CAF50; text-align: center;'>
+            <strong>AEF:LOC:0018</strong><br>
+            <strong>Network</strong>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col4:
+        st.markdown("""
+        <div style='background-color: #C8E6C9; padding: 15px; border-radius: 10px; border: 2px solid #4CAF50; text-align: center;'>
+            <strong>AEF:LOC:0019</strong><br>
+            <strong>Data</strong>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Display Risks and Mitigations if project data is available
+    if project_data and project_data.get('selected_interactions'):
+        st.markdown("---")
+        st.markdown("#### ⚠️ Security Elements")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**🚨 Identified Risks:**")
+            for risk_id, risk_info in project_data.get('risks', {}).items():
+                status = project_data.get('risk_status', {}).get(risk_id, 'Open')
+                status_color = {'Open': '#FF5722', 'In Progress': '#FF9800', 'Closed': '#4CAF50'}[status]
                 
-                # Risk box
-                risk_rect = patches.Rectangle(
-                    (risk_x - 0.2, risk_y - 0.15), 0.4, 0.3,
-                    linewidth=2, edgecolor='red', facecolor='orange', alpha=0.8
-                )
-                ax.add_patch(risk_rect)
+                st.markdown(f"""
+                <div style='background-color: #FFECB3; padding: 10px; border-radius: 5px; border: 2px solid #FF9800; margin: 5px 0;'>
+                    <strong style='color: #E65100;'>{risk_id}</strong><br>
+                    <small>{risk_info['description']}</small><br>
+                    <span style='background-color: {status_color}; color: white; padding: 2px 8px; border-radius: 3px; font-size: 10px;'>{status}</span>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("**🛡️ Implemented Mitigations:**")
+            for mit_id, mit_info in project_data.get('mitigations', {}).items():
+                status = project_data.get('mitigation_status', {}).get(mit_id, 'Open')
+                status_color = {'Open': '#FF5722', 'In Progress': '#FF9800', 'Closed': '#4CAF50'}[status]
                 
-                ax.text(risk_x, risk_y, risk_id, ha='center', va='center', 
-                        fontsize=8, weight='bold', color='black')
-        
-        # Add mitigations
-        for mit_id in project_data.get('mitigations', {}).keys():
-            mitigation_counter += 1
-            mit_x = 1 + (mitigation_counter * 0.7)
-            mit_y = 6
-            
-            # Mitigation box
-            mit_rect = patches.Rectangle(
-                (mit_x - 0.2, mit_y - 0.15), 0.4, 0.3,
-                linewidth=2, edgecolor='green', facecolor='lightgreen', alpha=0.8
-            )
-            ax.add_patch(mit_rect)
-            
-            ax.text(mit_x, mit_y, mit_id, ha='center', va='center', 
-                    fontsize=8, weight='bold', color='black')
-    
-    plt.title("Security Architecture Canvas", fontsize=16, weight='bold', pad=20)
-    return fig
+                st.markdown(f"""
+                <div style='background-color: #E8F5E8; padding: 10px; border-radius: 5px; border: 2px solid #4CAF50; margin: 5px 0;'>
+                    <strong style='color: #1B5E20;'>{mit_id}</strong><br>
+                    <small>{mit_info['description']}</small><br>
+                    <span style='background-color: {status_color}; color: white; padding: 2px 8px; border-radius: 3px; font-size: 10px;'>{status}</span>
+                </div>
+                """, unsafe_allow_html=True)
 
-def create_pie_chart(data, labels, title):
-    """Create a pie chart using matplotlib"""
-    fig, ax = plt.subplots(figsize=(8, 6))
-    
-    # Only create pie chart if there's data
-    if sum(data) > 0:
-        colors = ['#ff9999', '#66b3ff', '#99ff99', '#ffcc99']
-        wedges, texts, autotexts = ax.pie(data, labels=labels, autopct='%1.1f%%', 
-                                         colors=colors[:len(data)], startangle=90)
-        
-        # Enhance text
-        for autotext in autotexts:
-            autotext.set_color('black')
-            autotext.set_weight('bold')
-    else:
-        ax.text(0.5, 0.5, 'No Data Available', ha='center', va='center', 
-                transform=ax.transAxes, fontsize=14)
-    
-    ax.set_title(title, fontsize=14, weight='bold')
-    return fig
-
-def create_bar_chart(df, x_col, y_cols, title):
-    """Create a bar chart using matplotlib"""
-    fig, ax = plt.subplots(figsize=(10, 6))
-    
-    if not df.empty:
-        x = np.arange(len(df[x_col]))
-        width = 0.35
-        
-        if len(y_cols) == 2:
-            ax.bar(x - width/2, df[y_cols[0]], width, label=y_cols[0], alpha=0.8)
-            ax.bar(x + width/2, df[y_cols[1]], width, label=y_cols[1], alpha=0.8)
-        else:
-            ax.bar(x, df[y_cols[0]], width, label=y_cols[0], alpha=0.8)
-        
-        ax.set_xlabel(x_col)
-        ax.set_ylabel('Count')
-        ax.set_title(title)
-        ax.set_xticks(x)
-        ax.set_xticklabels(df[x_col], rotation=45, ha='right')
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-    else:
-        ax.text(0.5, 0.5, 'No Data Available', ha='center', va='center', 
-                transform=ax.transAxes, fontsize=14)
-        ax.set_title(title)
-    
-    plt.tight_layout()
-    return fig
+def display_interactions_flow(selected_interactions):
+    """Display selected interactions as a flow"""
+    if selected_interactions:
+        st.markdown("#### 🔄 Active Interactions")
+        for i, interaction in enumerate(selected_interactions):
+            source, target = interaction.split(' -> ')
+            st.markdown(f"""
+            <div style='background-color: #F5F5F5; padding: 8px; border-radius: 5px; border-left: 4px solid #2196F3; margin: 5px 0;'>
+                <strong>{source}</strong> → <strong>{target}</strong>
+            </div>
+            """, unsafe_allow_html=True)
 
 def admin_section():
     """Admin section for managing risks and mitigations"""
@@ -447,6 +508,10 @@ def project_management():
         )
         project_data['selected_interactions'] = selected_interactions
         
+        # Display selected interactions
+        if selected_interactions:
+            display_interactions_flow(selected_interactions)
+        
         # Risk management for project
         st.subheader("⚠️ Project Risk Management")
         
@@ -527,9 +592,7 @@ def project_management():
                             st.write(st.session_state.mitigations[mit_id]['description'])
         
         # Canvas visualization
-        st.subheader("🖼️ Security Architecture Canvas")
-        canvas_fig = create_canvas_visualization(project_data)
-        st.pyplot(canvas_fig, use_container_width=True)
+        display_canvas_text_based(project_data)
 
 def dashboard():
     """Dashboard showing project statistics"""
@@ -555,15 +618,23 @@ def dashboard():
     with col4:
         st.metric("Closed Projects", closed_projects)
     
-    # Project status distribution
-    status_counts = [open_projects, in_progress_projects, closed_projects]
-    status_labels = ['Open', 'In Progress', 'Closed']
+    # Project status charts using Streamlit's built-in chart functions
+    st.subheader("📈 Project Analytics")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        fig_status = create_pie_chart(status_counts, status_labels, "Project Status Distribution")
-        st.pyplot(fig_status, use_container_width=True)
+        # Project status distribution
+        status_data = pd.DataFrame({
+            'Status': ['Open', 'In Progress', 'Closed'],
+            'Count': [open_projects, in_progress_projects, closed_projects]
+        })
+        
+        if status_data['Count'].sum() > 0:
+            st.subheader("Project Status Distribution")
+            st.bar_chart(status_data.set_index('Status'))
+        else:
+            st.info("No project data to display")
     
     with col2:
         # Risk and mitigation statistics per project
@@ -576,31 +647,27 @@ def dashboard():
             
             project_stats.append({
                 'Project': project_name,
-                'Total Risks': total_risks,
                 'Open Risks': open_risks,
-                'Total Mitigations': total_mitigations,
                 'Open Mitigations': open_mitigations,
+                'Total Risks': total_risks,
+                'Total Mitigations': total_mitigations,
                 'Status': project_data['status']
             })
         
         if project_stats:
             stats_df = pd.DataFrame(project_stats)
-            fig_risks = create_bar_chart(
-                stats_df, 
-                'Project', 
-                ['Open Risks', 'Open Mitigations'],
-                "Open Risks & Mitigations by Project"
-            )
-            st.pyplot(fig_risks, use_container_width=True)
+            st.subheader("Risks & Mitigations by Project")
+            chart_data = stats_df[['Project', 'Open Risks', 'Open Mitigations']].set_index('Project')
+            st.bar_chart(chart_data)
     
     # Detailed project table
-    st.subheader("Project Details")
+    st.subheader("📋 Project Details")
     if project_stats:
         detailed_df = pd.DataFrame(project_stats)
         st.dataframe(detailed_df, use_container_width=True)
     
-    # Risk impact analysis
-    st.subheader("Risk Impact Analysis")
+    # Risk summary
+    st.subheader("⚠️ Risk Analysis")
     if st.session_state.risks:
         risk_impact_data = []
         for risk_id, risk_info in st.session_state.risks.items():
@@ -608,19 +675,24 @@ def dashboard():
             project_count = sum(1 for p in st.session_state.projects.values() 
                               if risk_id in p.get('risks', {}))
             
-            impact_score = {'Low': 1, 'Medium': 2, 'High': 3, 'Critical': 4}[risk_info['impact']]
-            
             risk_impact_data.append({
                 'Risk ID': risk_id,
+                'Description': risk_info['description'],
                 'Impact Level': risk_info['impact'],
-                'Impact Score': impact_score,
                 'Projects Affected': project_count,
-                'Domain': risk_info['domain']
+                'Domain': risk_info['domain'],
+                'Interaction': risk_info['interaction']
             })
         
         if risk_impact_data:
             risk_df = pd.DataFrame(risk_impact_data)
             st.dataframe(risk_df, use_container_width=True)
+            
+            # Risk impact chart
+            impact_counts = risk_df['Impact Level'].value_counts()
+            if not impact_counts.empty:
+                st.subheader("Risk Impact Distribution")
+                st.bar_chart(impact_counts)
 
 def main():
     """Main application function"""
@@ -644,6 +716,17 @@ def main():
         "- Mitigation management\n"
         "- Project oversight"
     )
+    
+    # Display current project info in sidebar if available
+    if st.session_state.current_project:
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("### Current Project")
+        st.sidebar.info(f"📁 **{st.session_state.current_project}**")
+        
+        project_data = st.session_state.projects[st.session_state.current_project]
+        st.sidebar.write(f"Status: **{project_data['status']}**")
+        st.sidebar.write(f"Risks: **{len(project_data.get('risks', {}))}**")
+        st.sidebar.write(f"Mitigations: **{len(project_data.get('mitigations', {}))}**")
     
     # Main content based on selected page
     if page == "Dashboard":
