@@ -1,4 +1,167 @@
-import streamlit as st
+def render_project_summary_dashboard(project_data):
+    """Enhanced project summary with risk/mitigation analysis using ONLY native Streamlit components"""
+    if not project_data:
+        return
+    
+    st.markdown("### 📊 Project Summary Dashboard")
+    
+    # Project status and metadata
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        status_color = {
+            'Open': '🔵',
+            'In Progress': '🟡', 
+            'Closed': '🟢'
+        }
+        st.metric("Project Status", 
+                 f"{status_color.get(project_data['status'], '⚪')} {project_data['status']}")
+    
+    with col2:
+        domains = ["People", "Services", "Applications", "Network", "Data", 
+                  "Information", "Products", "Process", "Facilities", "Platforms"]
+        total_elements = sum(len(project_data.get(f'{domain}_elements', [])) for domain in domains)
+        st.metric("Total Elements", total_elements)
+    
+    with col3:
+        total_connections = len(project_data.get('canvas_connections', []))
+        st.metric("Connections", total_connections)
+    
+    with col4:
+        completion_score = calculate_completion_score(project_data)
+        st.metric("Completion", f"{completion_score}%")
+    
+    # Risk and Mitigation Summary
+    st.markdown("#### 🚨 Risk & Mitigation Analysis")
+    
+    # Collect all risks and mitigations from project
+    project_risks = []
+    project_mitigations = []
+    
+    domains = ["People", "Services", "Applications", "Network", "Data", 
+              "Information", "Products", "Process", "Facilities", "Platforms"]
+    
+    for domain in domains:
+        domain_risks = project_data.get(f'{domain}_risks', [])
+        domain_mits = project_data.get(f'{domain}_mitigations', [])
+        
+        for risk_id in domain_risks:
+            if risk_id in st.session_state.risks:
+                risk_info = st.session_state.risks[risk_id].copy()
+                risk_info['id'] = risk_id
+                risk_info['domain_assigned'] = domain
+                project_risks.append(risk_info)
+        
+        for mit_id in domain_mits:
+            if mit_id in st.session_state.mitigations:
+                mit_info = st.session_state.mitigations[mit_id].copy()
+                mit_info['id'] = mit_id
+                mit_info['domain_assigned'] = domain
+                project_mitigations.append(mit_info)
+    
+    # Risk/Mitigation metrics
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("##### 📈 Risk Summary")
+        
+        if project_risks:
+            # Risk by impact using native Streamlit chart
+            risk_impact_counts = {}
+            for risk in project_risks:
+                impact = risk.get('impact', 'Unknown')
+                risk_impact_counts[impact] = risk_impact_counts.get(impact, 0) + 1
+            
+            if risk_impact_counts:
+                impact_df = pd.DataFrame(
+                    list(risk_impact_counts.items()), 
+                    columns=['Impact', 'Count']
+                )
+                
+                st.bar_chart(impact_df.set_index('Impact'))
+                
+                # Summary table
+                st.write("**Risk Distribution:**")
+                for impact, count in risk_impact_counts.items():
+                    color = {'Critical': '🔴', 'High': '🟠', 'Medium': '🟡', 'Low': '🟢'}.get(impact, '⚪')
+                    st.write(f"{color} {impact}: {count} risks")
+            
+            # Risk details table
+            risk_df = pd.DataFrame([{
+                'Risk ID': r['id'],
+                'Description': r['description'][:50] + '...',
+                'Impact': r['impact'],
+                'Domain': r['domain_assigned']
+            } for r in project_risks])
+            
+            st.dataframe(risk_df, use_container_width=True)
+        
+        else:
+            st.info("No risks assigned to this project yet.")
+    
+    with col2:
+        st.markdown("##### 🛡️ Mitigation Summary")
+        
+        if project_mitigations:
+            # Mitigation effectiveness using native chart
+            mit_effectiveness = {}
+            for mit in project_mitigations:
+                eff = mit.get('effectiveness', 'Unknown')
+                mit_effectiveness[eff] = mit_effectiveness.get(eff, 0) + 1
+            
+            if mit_effectiveness:
+                eff_df = pd.DataFrame(
+                    list(mit_effectiveness.items()), 
+                    columns=['Effectiveness', 'Count']
+                )
+                
+                st.bar_chart(eff_df.set_index('Effectiveness'))
+                
+                # Summary table
+                st.write("**Effectiveness Distribution:**")
+                for eff, count in mit_effectiveness.items():
+                    color = {'High': '🟢', 'Medium': '🟡', 'Low': '🔴'}.get(eff, '⚪')
+                    st.write(f"{color} {eff}: {count} mitigations")
+            
+            # Mitigation details table
+            mit_df = pd.DataFrame([{
+                'Mitigation ID': m['id'],
+                'Description': m['description'][:50] + '...',
+                'Effectiveness': m['effectiveness'],
+                'Domain': m['domain_assigned']
+            } for m in project_mitigations])
+            
+            st.dataframe(mit_df, use_container_width=True)
+        
+        else:
+            st.info("No mitigations assigned to this project yet.")
+    
+    # Risk-Mitigation Coverage Analysis
+    st.markdown("#### 🎯 Risk Coverage Analysis")
+    
+    coverage_analysis = analyze_risk_coverage(project_risks, project_mitigations)
+    
+    if coverage_analysis['total_risks'] > 0:
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric(
+                "Covered Risks", 
+                f"{coverage_analysis['covered_risks']}/{coverage_analysis['total_risks']}",
+                delta=f"{coverage_analysis['coverage_percentage']:.1f}% coverage"
+            )
+        
+        with col2:
+            st.metric(
+                "Uncovered Risks", 
+                coverage_analysis['uncovered_risks'],
+                delta=f"{100-coverage_analysis['coverage_percentage']:.1f}% remaining"
+            )
+        
+        with col3:
+            st.metric(
+                "Total Mitigations", 
+                coverage_analysis['total_miimport streamlit as st
 import pandas as pd
 from datetime import datetime
 import json
@@ -334,7 +497,7 @@ def create_visual_canvas_plot(project_data, show_labels=True):
     return fig
 
 def render_project_summary_dashboard(project_data):
-    """Enhanced project summary with risk/mitigation analysis"""
+    """Enhanced project summary with risk/mitigation analysis using native Streamlit charts"""
     if not project_data:
         return
     
@@ -401,33 +564,114 @@ def render_project_summary_dashboard(project_data):
         st.markdown("##### 📈 Risk Summary")
         
         if project_risks:
-            # Risk by impact
+            # Risk by impact using native Streamlit chart
             risk_impact_counts = {}
             for risk in project_risks:
                 impact = risk.get('impact', 'Unknown')
                 risk_impact_counts[impact] = risk_impact_counts.get(impact, 0) + 1
             
-            # Create risk impact chart
             if risk_impact_counts:
                 impact_df = pd.DataFrame(
                     list(risk_impact_counts.items()), 
                     columns=['Impact', 'Count']
                 )
                 
-                fig_risk = px.pie(
-                    impact_df, 
-                    values='Count', 
-                    names='Impact',
-                    title="Risks by Impact Level",
-                    color_discrete_map={
-                        'Critical': '#FF4444',
-                        'High': '#FF8800', 
-                        'Medium': '#FFBB33',
-                        'Low': '#00CC44'
-                    }
+                st.bar_chart(impact_df.set_index('Impact'))
+            
+            # Risk details table
+            risk_df = pd.DataFrame([{
+                'Risk ID': r['id'],
+                'Description': r['description'][:50] + '...',
+                'Impact': r['impact'],
+                'Domain': r['domain_assigned']
+            } for r in project_risks])
+            
+            st.dataframe(risk_df, use_container_width=True)
+        
+        else:
+            st.info("No risks assigned to this project yet.")
+    
+    with col2:
+        st.markdown("##### 🛡️ Mitigation Summary")
+        
+        if project_mitigations:
+            # Mitigation effectiveness using native chart
+            mit_effectiveness = {}
+            for mit in project_mitigations:
+                eff = mit.get('effectiveness', 'Unknown')
+                mit_effectiveness[eff] = mit_effectiveness.get(eff, 0) + 1
+            
+            if mit_effectiveness:
+                eff_df = pd.DataFrame(
+                    list(mit_effectiveness.items()), 
+                    columns=['Effectiveness', 'Count']
                 )
-                fig_risk.update_layout(height=300)
-                st.plotly_chart(fig_risk, use_container_width=True)
+                
+                st.bar_chart(eff_df.set_index('Effectiveness'))
+            
+            # Mitigation details table
+            mit_df = pd.DataFrame([{
+                'Mitigation ID': m['id'],
+                'Description': m['description'][:50] + '...',
+                'Effectiveness': m['effectiveness'],
+                'Domain': m['domain_assigned']
+            } for m in project_mitigations])
+            
+            st.dataframe(mit_df, use_container_width=True)
+        
+        else:
+            st.info("No mitigations assigned to this project yet.")
+    
+    # Risk-Mitigation Coverage Analysis
+    st.markdown("#### 🎯 Risk Coverage Analysis")
+    
+    coverage_analysis = analyze_risk_coverage(project_risks, project_mitigations)
+    
+    if coverage_analysis['total_risks'] > 0:
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric(
+                "Covered Risks", 
+                f"{coverage_analysis['covered_risks']}/{coverage_analysis['total_risks']}",
+                delta=f"{coverage_analysis['coverage_percentage']:.1f}% coverage"
+            )
+        
+        with col2:
+            st.metric(
+                "Uncovered Risks", 
+                coverage_analysis['uncovered_risks'],
+                delta=f"{100-coverage_analysis['coverage_percentage']:.1f}% remaining"
+            )
+        
+        with col3:
+            st.metric(
+                "Total Mitigations", 
+                coverage_analysis['total_mitigations']
+            )
+        
+        # Coverage visualization using matplotlib
+        if coverage_analysis['total_risks'] > 0:
+            fig, ax = plt.subplots(figsize=(8, 4))
+            
+            coverage_data = [
+                coverage_analysis['covered_risks'],
+                coverage_analysis['uncovered_risks']
+            ]
+            labels = ['Covered', 'Uncovered']
+            colors = ['#4CAF50', '#FF5722']
+            
+            ax.pie(coverage_data, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
+            ax.set_title('Risk Coverage Status')
+            
+            st.pyplot(fig, use_container_width=True)
+            plt.close(fig)
+        
+        # Show uncovered risks if any
+        if coverage_analysis['uncovered_risk_details']:
+            st.warning("**⚠️ Uncovered Risks:**")
+            for risk in coverage_analysis['uncovered_risk_details']:
+                st.write(f"• **{risk['id']}**: {risk['description']} (Impact: {risk['impact']})")st.plotly_chart(fig_risk, use_container_width=True)
             
             # Risk details table
             risk_df = pd.DataFrame([{
@@ -1310,7 +1554,7 @@ def render_domain_details_view(project_data):
     st.markdown("</div>", unsafe_allow_html=True)
 
 def dashboard():
-    """Enhanced dashboard with comprehensive project analytics"""
+    """Enhanced dashboard with comprehensive project analytics using native Streamlit charts"""
     st.header("📊 Architecture Dashboard")
     
     if not st.session_state.projects:
@@ -1373,34 +1617,25 @@ def dashboard():
         df = pd.DataFrame(project_data)
         st.dataframe(df, use_container_width=True)
     
-    # Enhanced analytics section
+    # Enhanced analytics section using native Streamlit charts
     col1, col2 = st.columns(2)
     
     with col1:
         st.subheader("📈 Project Analytics")
         
-        # Project status distribution
+        # Project status distribution using matplotlib
         if total_projects > 0:
-            status_data = pd.DataFrame({
-                'Status': ['Open', 'In Progress', 'Closed'],
-                'Count': [open_projects, in_progress_projects, closed_projects],
-                'Color': ['#2196F3', '#FF9800', '#4CAF50']
-            })
+            fig, ax = plt.subplots(figsize=(8, 6))
             
-            fig_status = px.pie(
-                status_data, 
-                values='Count', 
-                names='Status',
-                title="Project Status Distribution",
-                color='Status',
-                color_discrete_map={
-                    'Open': '#2196F3',
-                    'In Progress': '#FF9800', 
-                    'Closed': '#4CAF50'
-                }
-            )
-            fig_status.update_layout(height=400)
-            st.plotly_chart(fig_status, use_container_width=True)
+            status_data = [open_projects, in_progress_projects, closed_projects]
+            labels = ['Open', 'In Progress', 'Closed']
+            colors = ['#2196F3', '#FF9800', '#4CAF50']
+            
+            ax.pie(status_data, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
+            ax.set_title('Project Status Distribution')
+            
+            st.pyplot(fig, use_container_width=True)
+            plt.close(fig)
         else:
             st.info("No project data available")
     
@@ -1421,17 +1656,8 @@ def dashboard():
                 columns=['Domain', 'Elements']
             )
             
-            fig_domains = px.bar(
-                domain_df, 
-                x='Domain', 
-                y='Elements',
-                title="Elements by Architecture Domain",
-                color='Elements',
-                color_continuous_scale='viridis'
-            )
-            fig_domains.update_layout(height=400)
-            fig_domains.update_xaxis(tickangle=45)
-            st.plotly_chart(fig_domains, use_container_width=True)
+            # Use Streamlit's native bar chart
+            st.bar_chart(domain_df.set_index('Domain'))
         else:
             st.info("No domain elements defined yet")
     
@@ -1449,26 +1675,24 @@ def dashboard():
             risk_by_impact[impact] = risk_by_impact.get(impact, 0) + 1
         
         if risk_by_impact:
-            impact_df = pd.DataFrame(
-                list(risk_by_impact.items()), 
-                columns=['Impact', 'Count']
-            )
+            # Create matplotlib pie chart for risks
+            fig, ax = plt.subplots(figsize=(6, 4))
             
-            fig_risk_impact = px.pie(
-                impact_df, 
-                values='Count', 
-                names='Impact',
-                title="Risk Distribution by Impact",
-                color='Impact',
-                color_discrete_map={
-                    'Critical': '#FF4444',
-                    'High': '#FF8800',
-                    'Medium': '#FFBB33',
-                    'Low': '#00CC44'
-                }
-            )
-            fig_risk_impact.update_layout(height=300)
-            st.plotly_chart(fig_risk_impact, use_container_width=True)
+            impact_colors = {
+                'Critical': '#FF4444',
+                'High': '#FF8800',
+                'Medium': '#FFBB33',
+                'Low': '#00CC44'
+            }
+            
+            colors = [impact_colors.get(impact, '#666666') for impact in risk_by_impact.keys()]
+            
+            ax.pie(risk_by_impact.values(), labels=risk_by_impact.keys(), 
+                  colors=colors, autopct='%1.1f%%', startangle=90)
+            ax.set_title('Risk Distribution by Impact')
+            
+            st.pyplot(fig, use_container_width=True)
+            plt.close(fig)
         else:
             st.info("No risks defined in library")
     
@@ -1485,20 +1709,8 @@ def dashboard():
                 columns=['Effectiveness', 'Count']
             )
             
-            fig_mit_eff = px.bar(
-                eff_df, 
-                x='Effectiveness', 
-                y='Count',
-                title="Mitigation Effectiveness Distribution",
-                color='Effectiveness',
-                color_discrete_map={
-                    'High': '#00CC44',
-                    'Medium': '#FFBB33',
-                    'Low': '#FF8800'
-                }
-            )
-            fig_mit_eff.update_layout(height=300)
-            st.plotly_chart(fig_mit_eff, use_container_width=True)
+            # Use Streamlit's native bar chart
+            st.bar_chart(eff_df.set_index('Effectiveness'))
         else:
             st.info("No mitigations defined in library")
     
@@ -1529,23 +1741,19 @@ def dashboard():
         st.metric("Covered Risks", len(covered_project_risks))
         st.metric("Coverage Percentage", f"{coverage_pct:.1f}%")
         
-        # Coverage visualization
-        coverage_data = pd.DataFrame({
-            'Status': ['Covered', 'Uncovered'],
-            'Count': [len(covered_project_risks), len(all_project_risks) - len(covered_project_risks)]
-        })
-        
+        # Coverage visualization using matplotlib
         if len(all_project_risks) > 0:
-            fig_coverage = px.pie(
-                coverage_data,
-                values='Count',
-                names='Status',
-                title="Risk Coverage Status",
-                color='Status',
-                color_discrete_map={'Covered': '#00CC44', 'Uncovered': '#FF4444'}
-            )
-            fig_coverage.update_layout(height=300)
-            st.plotly_chart(fig_coverage, use_container_width=True)
+            fig, ax = plt.subplots(figsize=(6, 4))
+            
+            coverage_data = [len(covered_project_risks), len(all_project_risks) - len(covered_project_risks)]
+            labels = ['Covered', 'Uncovered']
+            colors = ['#00CC44', '#FF4444']
+            
+            ax.pie(coverage_data, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
+            ax.set_title('Risk Coverage Status')
+            
+            st.pyplot(fig, use_container_width=True)
+            plt.close(fig)
 
 def main():
     """Enhanced main application function with improved navigation"""
