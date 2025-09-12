@@ -635,6 +635,9 @@ def project_management():
         
         # Main interactive canvas
         render_interactive_canvas(project_data)
+        
+        # Project save controls and status management
+        render_project_save_controls(selected_project, project_data)
 
 def admin_section():
     """Simplified admin section for managing master data"""
