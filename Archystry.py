@@ -1,4 +1,288 @@
-import streamlit as st
+with col3:
+            st.metric(
+                "Total Mitigations", 
+                coverage_analysis['total_mitigations']
+            )
+        
+        # Coverage visualization using pure text/emoji representation
+        if coverage_analysis['total_risks'] > 0:
+            st.markdown("##### 📊 Risk Coverage Visualization")
+            
+            covered = coverage_analysis['covered_risks']
+            uncovered = coverage_analysis['uncovered_risks']
+            total = coverage_analysis['total_risks']
+            
+            # Create a simple text-based progress bar
+            coverage_pct = coverage_analysis['coverage_percentage']
+            filled_blocks = int(coverage_pct / 5)  # Each block represents 5%
+            empty_blocks = 20 - filled_blocks
+            
+            progress_bar = "🟢" * filled_blocks + "⚪" * empty_blocks
+            
+            st.write(f"**Coverage Progress:** {coverage_pct:.1f}%")
+            st.write(progress_bar)
+            
+            # Coverage breakdown
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.success(f"✅ **Covered:** {covered} risks ({covered/total*100:.1f}%)")
+            with col_b:
+                st.error(f"❌ **Uncovered:** {uncovered} risks ({uncovered/total*100:.1f}%)")
+        
+        # Show uncovered risks if any
+        if coverage_analysis['uncovered_risk_details']:
+            st.warning("**⚠️ Uncovered Risks:**")
+            for risk in coverage_analysis['uncovered_risk_details']:
+                st.write(f"• **{risk['id']}**: {risk['description']} (Impact: {risk['impact']})")
+
+def dashboard():
+    """Enhanced dashboard with comprehensive project analytics using ONLY native Streamlit components"""
+    st.header("📊 Architecture Dashboard")
+    
+    if not st.session_state.projects:
+        st.info("🚀 No projects yet. Create your first security architecture project to get started!")
+        
+        if st.button("➕ Create First Project"):
+            st.session_state.redirect_to_projects = True
+            st.rerun()
+        return
+    
+    # Overall statistics
+    total_projects = len(st.session_state.projects)
+    open_projects = sum(1 for p in st.session_state.projects.values() if p['status'] == 'Open')
+    in_progress_projects = sum(1 for p in st.session_state.projects.values() if p['status'] == 'In Progress')
+    closed_projects = sum(1 for p in st.session_state.projects.values() if p['status'] == 'Closed')
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("📁 Total Projects", total_projects)
+    with col2:
+        st.metric("🔵 Open", open_projects)
+    with col3:
+        st.metric("🟡 In Progress", in_progress_projects)
+    with col4:
+        st.metric("🟢 Completed", closed_projects)
+    
+    st.markdown("---")
+    
+    # Enhanced project overview with risk metrics
+    st.subheader("📋 Project Overview")
+    
+    project_data = []
+    domains = ["People", "Services", "Applications", "Network", "Data", "Information", "Products", "Process", "Facilities", "Platforms"]
+    
+    for project_name, project_info in st.session_state.projects.items():
+        # Count elements across domains
+        total_elements = sum(len(project_info.get(f'{domain}_elements', [])) for domain in domains)
+        # Count risks across domains
+        total_risks = sum(len(project_info.get(f'{domain}_risks', [])) for domain in domains)
+        # Count mitigations across domains
+        total_mitigations = sum(len(project_info.get(f'{domain}_mitigations', [])) for domain in domains)
+        # Count connections
+        total_connections = len(project_info.get('canvas_connections', []))
+        # Calculate completion
+        completion = calculate_completion_score(project_info)
+        
+        project_data.append({
+            'Project Name': project_name,
+            'Status': project_info['status'],
+            'Owner': project_info['owner'],
+            'Elements': total_elements,
+            'Connections': total_connections,
+            'Risks': total_risks,
+            'Mitigations': total_mitigations,
+            'Completion %': completion,
+            'Created': project_info['created_date'][:10]
+        })
+    
+    if project_data:
+        df = pd.DataFrame(project_data)
+        st.dataframe(df, use_container_width=True)
+    
+    # Enhanced analytics section using ONLY native Streamlit charts
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("📈 Project Analytics")
+        
+        # Project status distribution using text representation
+        if total_projects > 0:
+            st.write("**Project Status Distribution:**")
+            
+            # Create percentage-based visualization
+            open_pct = (open_projects / total_projects) * 100
+            progress_pct = (in_progress_projects / total_projects) * 100
+            closed_pct = (closed_projects / total_projects) * 100
+            
+            st.write(f"🔵 **Open:** {open_projects} projects ({open_pct:.1f}%)")
+            st.progress(open_pct / 100)
+            
+            st.write(f"🟡 **In Progress:** {in_progress_projects} projects ({progress_pct:.1f}%)")
+            st.progress(progress_pct / 100)
+            
+            st.write(f"🟢 **Completed:** {closed_projects} projects ({closed_pct:.1f}%)")
+            st.progress(closed_pct / 100)
+            
+            # Simple bar chart using native Streamlit
+            status_df = pd.DataFrame({
+                'Status': ['Open', 'In Progress', 'Closed'],
+                'Count': [open_projects, in_progress_projects, closed_projects]
+            })
+            st.bar_chart(status_df.set_index('Status'))
+        else:
+            st.info("No project data available")
+    
+    with col2:
+        st.subheader("🏗️ Architecture Complexity")
+        
+        # Elements by domain across all projects
+        domain_totals = {}
+        for domain in domains:
+            total = sum(len(project_info.get(f'{domain}_elements', [])) 
+                       for project_info in st.session_state.projects.values())
+            if total > 0:
+                domain_totals[domain] = total
+        
+        if domain_totals:
+            domain_df = pd.DataFrame(
+                list(domain_totals.items()), 
+                columns=['Domain', 'Elements']
+            )
+            
+            # Use Streamlit's native bar chart
+            st.bar_chart(domain_df.set_index('Domain'))
+            
+            # Text summary
+            st.write("**Domain Element Summary:**")
+            for domain, count in sorted(domain_totals.items(), key=lambda x: x[1], reverse=True):
+                st.write(f"• **{domain}:** {count} elements")
+        else:
+            st.info("No domain elements defined yet")
+    
+    # Security risk overview
+    st.markdown("---")
+    st.subheader("🚨 Security Risk Overview")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.write("**📊 Risk Library Summary:**")
+        risk_by_impact = {}
+        for risk_info in st.session_state.risks.values():
+            impact = risk_info.get('impact', 'Unknown')
+            risk_by_impact[impact] = risk_by_impact.get(impact, 0) + 1
+        
+        if risk_by_impact:
+            # Text-based risk summary
+            st.write("**Risk Distribution by Impact:**")
+            for impact, count in sorted(risk_by_impact.items(), 
+                                      key=lambda x: {'Critical': 4, 'High': 3, 'Medium': 2, 'Low': 1}.get(x[0], 0), 
+                                      reverse=True):
+                color = {'Critical': '🔴', 'High': '🟠', 'Medium': '🟡', 'Low': '🟢'}.get(impact, '⚪')
+                st.write(f"{color} **{impact}:** {count} risks")
+            
+            # Simple bar chart
+            impact_df = pd.DataFrame(
+                list(risk_by_impact.items()), 
+                columns=['Impact', 'Count']
+            )
+            st.bar_chart(impact_df.set_index('Impact'))
+        else:
+            st.info("No risks defined in library")
+    
+    with col2:
+        st.write("**🛡️ Mitigation Effectiveness:**")
+        mit_by_effectiveness = {}
+        for mit_info in st.session_state.mitigations.values():
+            eff = mit_info.get('effectiveness', 'Unknown')
+            mit_by_effectiveness[eff] = mit_by_effectiveness.get(eff, 0) + 1
+        
+        if mit_by_effectiveness:
+            # Text summary
+            st.write("**Mitigation Effectiveness Distribution:**")
+            for eff, count in sorted(mit_by_effectiveness.items(), 
+                                   key=lambda x: {'High': 3, 'Medium': 2, 'Low': 1}.get(x[0], 0), 
+                                   reverse=True):
+                color = {'High': '🟢', 'Medium': '🟡', 'Low': '🔴'}.get(eff, '⚪')
+                st.write(f"{color} **{eff}:** {count} mitigations")
+            
+            # Simple bar chart
+            eff_df = pd.DataFrame(
+                list(mit_by_effectiveness.items()), 
+                columns=['Effectiveness', 'Count']
+            )
+            st.bar_chart(eff_df.set_index('Effectiveness'))
+        else:
+            st.info("No mitigations defined in library")
+    
+    with col3:
+        st.write("**🔗 Risk-Mitigation Coverage:**")
+        
+        # Calculate overall coverage across all projects
+        all_project_risks = set()
+        all_project_mitigations = set()
+        
+        for project_info in st.session_state.projects.values():
+            for domain in domains:
+                all_project_risks.update(project_info.get(f'{domain}_risks', []))
+                all_project_mitigations.update(project_info.get(f'{domain}_mitigations', []))
+        
+        # Calculate coverage
+        covered_risks = set()
+        for mit_id in all_project_mitigations:
+            if mit_id in st.session_state.mitigations:
+                mapped_risks = st.session_state.mitigations[mit_id].get('mapped_risks', [])
+                covered_risks.update(mapped_risks)
+        
+        covered_project_risks = all_project_risks.intersection(covered_risks)
+        coverage_pct = (len(covered_project_risks) / len(all_project_risks) * 100) if all_project_risks else 0
+        
+        # Coverage metrics
+        st.metric("Total Project Risks", len(all_project_risks))
+        st.metric("Covered Risks", len(covered_project_risks))
+        st.metric("Coverage Percentage", f"{coverage_pct:.1f}%")
+        
+        # Coverage visualization using text/emoji progress bar
+        if len(all_project_risks) > 0:
+            st.write("**Coverage Progress:**")
+            filled_blocks = int(coverage_pct / 5)  # Each block represents 5%
+            empty_blocks = 20 - filled_blocks
+            progress_bar = "🟢" * filled_blocks + "⚪" * empty_blocks
+            st.write(progress_bar)
+            st.progress(coverage_pct / 100)
+            
+            # Coverage breakdown
+            uncovered_risks = len(all_project_risks) - len(covered_project_risks)
+            st.success(f"✅ Covered: {len(covered_project_risks)} risks")
+            if uncovered_risks > 0:
+                st.error(f"❌ Uncovered: {uncovered_risks} risks")
+    
+    # Additional insights
+    if st.session_state.projects:
+        st.markdown("---")
+        st.subheader("💡 Key Insights")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Most active domains
+            domain_activity = {}
+            for project_info in st.session_state.projects.values():
+                for domain in domains:
+                    activity = (len(project_info.get(f'{domain}_elements', [])) + 
+                              len(project_info.get(f'{domain}_risks', [])) + 
+                              len(project_info.get(f'{domain}_mitigations', [])))
+                    domain_activity[domain] = domain_activity.get(domain, 0) + activity
+            
+            if domain_activity:
+                most_active = max(domain_activity.items(), key=lambda x: x[1])
+                st.info(f"🎯 **Most Active Domain:** {most_active[0]} with {most_active[1]} total items")
+        
+        with col2:
+            # Project completion average
+            if project_data:
+                avg_completion = sum(p['Completion %'] for p in project_data) / len(project_data)
+                st.info(f"📊 **Average Project Completion:** {avg_completion:.1f}%")import streamlit as st
 import pandas as pd
 from datetime import datetime
 import json
