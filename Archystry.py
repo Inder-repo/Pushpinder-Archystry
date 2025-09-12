@@ -678,6 +678,49 @@ def admin_section():
                     if st.button("✏️ Edit", key=f"edit_risk_{risk_id}"):
                         st.info("Edit functionality - to be implemented")
                 with col3:
+                    if st.button("🗑️ Delete", key=f"delete_risk_{risk_id}"):
+                        del st.session_state.risks[risk_id]
+                        st.success(f"Risk {risk_id} deleted!")
+                        st.rerun()
+                st.markdown("---")
+    
+    with tab2:
+        st.subheader("Mitigation Library Management")
+        
+        # Add new mitigation
+        with st.expander("➕ Add New Mitigation"):
+            col1, col2 = st.columns(2)
+            with col1:
+                mit_id = st.text_input("Mitigation ID", placeholder="MIT006")
+                mit_description = st.text_area("Mitigation Description")
+            with col2:
+                mit_domain = st.selectbox("Implementation Domain", 
+                    ["", "People", "Services", "Applications", "Network", "Data", "Information", "Products", "Process", "Facilities", "Platforms"])
+                available_risks = list(st.session_state.risks.keys())
+                mapped_risks = st.multiselect("Addresses Risks", available_risks)
+            
+            if st.button("➕ Add Mitigation"):
+                if mit_id and mit_description:
+                    st.session_state.mitigations[mit_id] = {
+                        'description': mit_description,
+                        'domain': mit_domain,
+                        'mapped_risks': mapped_risks
+                    }
+                    st.success(f"✅ Mitigation {mit_id} added successfully!")
+                    st.rerun()
+        
+        # Display existing mitigations
+        if st.session_state.mitigations:
+            st.subheader("Current Mitigation Library")
+            for mit_id, mit_info in st.session_state.mitigations.items():
+                col1, col2, col3 = st.columns([3, 1, 1])
+                with col1:
+                    st.write(f"**{mit_id}:** {mit_info['description']}")
+                    st.caption(f"Domain: {mit_info.get('domain', 'General')} | Addresses: {', '.join(mit_info.get('mapped_risks', []))}")
+                with col2:
+                    if st.button("✏️ Edit", key=f"edit_mit_{mit_id}"):
+                        st.info("Edit functionality - to be implemented")
+                with col3:
                     if st.button("🗑️ Delete", key=f"delete_mit_{mit_id}"):
                         del st.session_state.mitigations[mit_id]
                         st.success(f"Mitigation {mit_id} deleted!")
@@ -914,47 +957,4 @@ def main():
         admin_section()
 
 if __name__ == "__main__":
-    main()("🗑️ Delete", key=f"delete_risk_{risk_id}"):
-                        del st.session_state.risks[risk_id]
-                        st.success(f"Risk {risk_id} deleted!")
-                        st.rerun()
-                st.markdown("---")
-    
-    with tab2:
-        st.subheader("Mitigation Library Management")
-        
-        # Add new mitigation
-        with st.expander("➕ Add New Mitigation"):
-            col1, col2 = st.columns(2)
-            with col1:
-                mit_id = st.text_input("Mitigation ID", placeholder="MIT006")
-                mit_description = st.text_area("Mitigation Description")
-            with col2:
-                mit_domain = st.selectbox("Implementation Domain", 
-                    ["", "People", "Services", "Applications", "Network", "Data", "Information", "Products", "Process", "Facilities", "Platforms"])
-                available_risks = list(st.session_state.risks.keys())
-                mapped_risks = st.multiselect("Addresses Risks", available_risks)
-            
-            if st.button("➕ Add Mitigation"):
-                if mit_id and mit_description:
-                    st.session_state.mitigations[mit_id] = {
-                        'description': mit_description,
-                        'domain': mit_domain,
-                        'mapped_risks': mapped_risks
-                    }
-                    st.success(f"✅ Mitigation {mit_id} added successfully!")
-                    st.rerun()
-        
-        # Display existing mitigations
-        if st.session_state.mitigations:
-            st.subheader("Current Mitigation Library")
-            for mit_id, mit_info in st.session_state.mitigations.items():
-                col1, col2, col3 = st.columns([3, 1, 1])
-                with col1:
-                    st.write(f"**{mit_id}:** {mit_info['description']}")
-                    st.caption(f"Domain: {mit_info.get('domain', 'General')} | Addresses: {', '.join(mit_info.get('mapped_risks', []))}")
-                with col2:
-                    if st.button("✏️ Edit", key=f"edit_mit_{mit_id}"):
-                        st.info("Edit functionality - to be implemented")
-                with col3:
-                    if st.button
+    main()
