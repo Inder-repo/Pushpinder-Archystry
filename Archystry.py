@@ -23,26 +23,27 @@ def initialize_session_state():
             'ADV001': {
                 'description': 'Adversary compromises customer credentials',
                 'impact': 'High',
-                'interaction': 'Customer -> Services',
                 'domain': 'Services'
             },
             'ADV002': {
                 'description': 'Data breach through application vulnerability',
                 'impact': 'Critical',
-                'interaction': 'People -> Applications',
                 'domain': 'Applications'
             },
             'ADV003': {
                 'description': 'Network intrusion attempt',
                 'impact': 'Medium',
-                'interaction': 'Applications -> Network',
                 'domain': 'Network'
             },
             'ADV004': {
                 'description': 'Unauthorized access to sensitive data',
                 'impact': 'High',
-                'interaction': 'Services -> Information',
                 'domain': 'Information'
+            },
+            'ADV005': {
+                'description': 'Social engineering attacks on personnel',
+                'impact': 'High',
+                'domain': 'People'
             }
         }
     
@@ -54,7 +55,7 @@ def initialize_session_state():
                 'mapped_risks': ['ADV001']
             },
             'MIT002': {
-                'description': 'Security code review process',
+                'description': 'Security code review and testing',
                 'domain': 'Applications',
                 'mapped_risks': ['ADV002']
             },
@@ -64,753 +65,518 @@ def initialize_session_state():
                 'mapped_risks': ['ADV003']
             },
             'MIT004': {
-                'description': 'Data encryption at rest and in transit',
+                'description': 'Data encryption and access controls',
                 'domain': 'Information',
                 'mapped_risks': ['ADV004']
+            },
+            'MIT005': {
+                'description': 'Security awareness training',
+                'domain': 'People',
+                'mapped_risks': ['ADV005']
             }
         }
     
     if 'current_project' not in st.session_state:
         st.session_state.current_project = None
 
-# Domain definitions based on the canvas
-DOMAINS = {
-    'Enterprise Domain': {
-        'level': 1,
-        'color': '#E8F4FD',
-        'subdomains': {
-            'Business Value': {'id': 'AEF:LOC:0039', 'color': '#B3E5FC'},
-            'Financial Value': {'id': 'AEF:LOC:0040', 'color': '#B3E5FC'},
-            'Social Impact': {'id': 'AEF:LOC:0041', 'color': '#B3E5FC'}
-        }
-    },
-    'Products': {
-        'level': 2,
-        'color': '#FFF3E0',
-        'id': 'AEF:LOC:0006',
-        'subdomains': {}
-    },
-    'Services': {
-        'level': 2,
-        'color': '#FFF3E0',
-        'id': 'AEF:LOC:0002',
-        'subdomains': {}
-    },
-    'Information': {
-        'level': 2,
-        'color': '#FFF3E0',
-        'id': 'AEF:LOC:0003',
-        'subdomains': {}
-    },
-    'People': {
-        'level': 3,
-        'color': '#F3E5F5',
-        'id': 'AEF:LOC:0004',
-        'subdomains': {
-            'Customer': {'color': '#E1BEE7'},
-            'User': {'color': '#E1BEE7'},
-            'Admin': {'color': '#E1BEE7'}
-        }
-    },
-    'Process': {
-        'level': 3,
-        'color': '#F3E5F5',
-        'id': 'AEF:LOC:0005',
-        'subdomains': {}
-    },
-    'Facilities': {
-        'level': 3,
-        'color': '#F3E5F5',
-        'id': 'AEF:LOC:0007',
-        'subdomains': {}
-    },
-    'Information Technology': {
-        'level': 4,
-        'color': '#E8F5E8',
-        'subdomains': {
-            'Applications': {'id': 'AEF:LOC:0016', 'color': '#C8E6C9'},
-            'Platforms': {'id': 'AEF:LOC:0017', 'color': '#C8E6C9'},
-            'Network': {'id': 'AEF:LOC:0018', 'color': '#C8E6C9'},
-            'Data': {'id': 'AEF:LOC:0019', 'color': '#C8E6C9'}
-        }
-    }
-}
-
-INTERACTIONS = [
-    'Customer -> Services',
-    'User -> Applications', 
-    'Admin -> Applications',
-    'People -> Applications',
-    'Applications -> Network',
-    'Applications -> Data',
-    'Services -> Information',
-    'People -> Services',
-    'Network -> Data',
-    'Process -> Applications',
-    'Services -> Process',
-    'Information -> People',
-    'Platforms -> Applications',
-    'Data -> Information',
-    'Network -> Services'
+# ArchiMate-style interactions based on the reference image
+ARCHIMATE_INTERACTIONS = [
+    # Enterprise Domain connections
+    "<<creates>>",
+    "<<packages>>",
+    "<<has>>",
+    "<<expose/manipulate>>",
+    "<<manipulate>>",
+    "<<expose>>",
+    
+    # Business Layer connections
+    "<<define>>",
+    "<<builds>>",
+    "<<request>>",
+    "<<deliver>>",
+    "<<manage>>",
+    "<<describe>>",
+    "<<execute>>",
+    "<<structure>>",
+    "<<contain>>",
+    
+    # Operational Layer connections
+    "<<support>>",
+    "<<use>>",
+    "<<connect>>",
+    "<<transfer>>",
+    "<<represents>>",
+    
+    # Technology Layer connections
+    "<<host>>",
+    "<<connects>>",
+    "<<transform>>"
 ]
 
-def manage_domain_elements(domain_name, project_data):
-    """Manage dynamic elements within a domain"""
+def render_interactive_canvas(project_data):
+    """Render the main interactive canvas matching ArchiMate style"""
     if not project_data:
-        return []
-    
-    elements_key = f'{domain_name}_elements'
-    if elements_key not in project_data:
-        project_data[elements_key] = []
-    
-    st.write(f"**Manage {domain_name} Elements:**")
-    
-    # Add new element
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        new_element = st.text_input(f"Add element to {domain_name}", 
-                                  key=f"new_element_{domain_name}",
-                                  placeholder="Enter element name")
-    with col2:
-        if st.button(f"Add", key=f"add_element_{domain_name}"):
-            if new_element and new_element not in project_data[elements_key]:
-                project_data[elements_key].append(new_element)
-                st.success(f"Added {new_element} to {domain_name}")
-                st.rerun()
-    
-    # Display existing elements with delete option
-    if project_data[elements_key]:
-        for i, element in enumerate(project_data[elements_key]):
-            col1, col2 = st.columns([4, 1])
-            with col1:
-                st.write(f"• {element}")
-            with col2:
-                if st.button("🗑️", key=f"delete_{domain_name}_{i}"):
-                    project_data[elements_key].remove(element)
-                    st.rerun()
-    
-    return project_data[elements_key]
-
-def manage_domain_risks(domain_name, project_data, available_risks):
-    """Manage risks assigned to a domain"""
-    if not project_data:
-        return []
-    
-    risks_key = f'{domain_name}_risks'
-    if risks_key not in project_data:
-        project_data[risks_key] = []
-    
-    st.write(f"**Assign Risks to {domain_name}:**")
-    
-    # Filter risks relevant to this domain
-    domain_risks = {k: v for k, v in available_risks.items() 
-                   if v.get('domain') == domain_name or v.get('domain') in DOMAINS.get(domain_name, {}).get('subdomains', {})}
-    
-    if domain_risks:
-        selected_risks = st.multiselect(
-            f"Select risks for {domain_name}",
-            list(domain_risks.keys()),
-            default=project_data[risks_key],
-            key=f"risks_{domain_name}",
-            format_func=lambda x: f"{x}: {domain_risks[x]['description'][:50]}..."
-        )
-        project_data[risks_key] = selected_risks
-        return selected_risks
-    else:
-        st.info(f"No risks available for {domain_name}")
-        return []
-
-def manage_domain_mitigations(domain_name, project_data, available_mitigations):
-    """Manage mitigations assigned to a domain"""
-    if not project_data:
-        return []
-    
-    mitigations_key = f'{domain_name}_mitigations'
-    if mitigations_key not in project_data:
-        project_data[mitigations_key] = []
-    
-    st.write(f"**Assign Mitigations to {domain_name}:**")
-    
-    # Filter mitigations relevant to this domain
-    domain_mitigations = {k: v for k, v in available_mitigations.items() 
-                         if v.get('domain') == domain_name or v.get('domain') in DOMAINS.get(domain_name, {}).get('subdomains', {})}
-    
-    if domain_mitigations:
-        selected_mitigations = st.multiselect(
-            f"Select mitigations for {domain_name}",
-            list(domain_mitigations.keys()),
-            default=project_data[mitigations_key],
-            key=f"mitigations_{domain_name}",
-            format_func=lambda x: f"{x}: {domain_mitigations[x]['description'][:50]}..."
-        )
-        project_data[mitigations_key] = selected_mitigations
-        return selected_mitigations
-    else:
-        st.info(f"No mitigations available for {domain_name}")
-        return []
-
-def display_canvas_with_interactions(project_data=None):
-    """Display the security architecture canvas with visual interactions"""
-    st.markdown("### 🏗️ Enhanced Security Architecture Canvas")
-    
-    if not project_data:
-        st.info("Select or create a project to see the interactive canvas.")
+        st.info("Create or select a project to start building your architecture canvas.")
         return
     
-    # CSS for styling and connection lines
     st.markdown("""
     <style>
-    .domain-box {
-        position: relative;
-        margin: 10px;
-        padding: 15px;
-        border-radius: 10px;
+    .archimate-domain {
         border: 2px solid;
-        text-align: center;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 10px;
+        position: relative;
+        background: white;
+        min-height: 200px;
     }
-    .element-item {
-        background-color: rgba(255,255,255,0.8);
+    
+    .enterprise-domain {
+        border-color: #1976D2;
+        background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+        border-style: solid;
+    }
+    
+    .business-domain {
+        border-color: #F57C00;
+        background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
+        border-style: dashed;
+    }
+    
+    .operational-domain {
+        border-color: #7B1FA2;
+        background: linear-gradient(135deg, #F3E5F5 0%, #E1BEE7 100%);
+        border-style: solid;
+    }
+    
+    .technology-domain {
+        border-color: #388E3C;
+        background: linear-gradient(135deg, #E8F5E8 0%, #C8E6C9 100%);
+        border-style: solid;
+    }
+    
+    .domain-header {
+        font-weight: bold;
+        font-size: 14px;
+        text-align: center;
+        margin-bottom: 15px;
         padding: 5px;
-        margin: 3px;
-        border-radius: 5px;
+        background: rgba(255,255,255,0.8);
+        border-radius: 4px;
+    }
+    
+    .domain-element {
+        background: rgba(255,255,255,0.9);
         border: 1px solid #ccc;
+        border-radius: 4px;
+        padding: 8px;
+        margin: 5px;
         display: inline-block;
         font-size: 12px;
+        min-width: 80px;
+        text-align: center;
     }
-    .risk-item {
-        background-color: #ffebee;
-        padding: 3px 6px;
-        margin: 2px;
+    
+    .risk-element {
+        background: #FFEBEE;
+        border: 1px solid #E57373;
+        color: #C62828;
         border-radius: 3px;
-        border: 1px solid #f44336;
-        font-size: 10px;
-        color: #c62828;
-    }
-    .mitigation-item {
-        background-color: #e8f5e8;
-        padding: 3px 6px;
+        padding: 4px 6px;
         margin: 2px;
-        border-radius: 3px;
-        border: 1px solid #4caf50;
         font-size: 10px;
-        color: #2e7d32;
+        display: inline-block;
     }
+    
+    .mitigation-element {
+        background: #E8F5E8;
+        border: 1px solid #66BB6A;
+        color: #2E7D32;
+        border-radius: 3px;
+        padding: 4px 6px;
+        margin: 2px;
+        font-size: 10px;
+        display: inline-block;
+    }
+    
     .interaction-line {
-        stroke: #2196F3;
-        stroke-width: 2;
-        marker-end: url(#arrowhead);
+        position: absolute;
+        border-top: 2px solid #424242;
+        z-index: 10;
+    }
+    
+    .interaction-label {
+        background: white;
+        border: 1px solid #424242;
+        padding: 2px 6px;
+        font-size: 10px;
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    
+    .canvas-container {
+        position: relative;
+        background: #F5F5F5;
+        border: 1px solid #E0E0E0;
+        border-radius: 8px;
+        padding: 20px;
+        min-height: 800px;
     }
     </style>
     """, unsafe_allow_html=True)
     
+    # Canvas container
+    st.markdown('<div class="canvas-container">', unsafe_allow_html=True)
+    
     # Enterprise Domain (Top Level)
-    st.markdown("---")
-    st.markdown("#### 🏢 Enterprise Domain")
-    
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown("""
-        <div class='domain-box' style='background-color: #B3E5FC; border-color: #0288D1;'>
-            <strong>AEF:LOC:0040</strong><br>
-            <strong>Financial Value</strong>
+    st.markdown("""
+    <div class="archimate-domain enterprise-domain" style="margin-bottom: 20px;">
+        <div class="domain-header">AEF:LOC:0000 - Enterprise Domain</div>
+        <div style="display: flex; justify-content: space-around;">
+            <div class="domain-element">
+                <strong>AEF:LOC:0040</strong><br>Financial Value
+            </div>
+            <div class="domain-element">
+                <strong>AEF:LOC:0039</strong><br>Business Value
+            </div>
+            <div class="domain-element">
+                <strong>AEF:LOC:0041</strong><br>Social Impact
+            </div>
         </div>
-        """, unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
     
-    with col2:
-        st.markdown("""
-        <div class='domain-box' style='background-color: #B3E5FC; border-color: #0288D1;'>
-            <strong>AEF:LOC:0039</strong><br>
-            <strong>Business Value</strong>
-        </div>
-        """, unsafe_allow_html=True)
+    # Business Layer
+    st.markdown("### Business Layer")
     
-    with col3:
-        st.markdown("""
-        <div class='domain-box' style='background-color: #B3E5FC; border-color: #0288D1;'>
-            <strong>AEF:LOC:0041</strong><br>
-            <strong>Social Impact</strong>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Business Layer with enhanced content
-    st.markdown("#### 📋 Business Layer")
     col1, col2, col3 = st.columns(3)
     
     # Products Domain
     with col1:
-        st.markdown("**Products Domain**")
-        products_html = """
-        <div class='domain-box' style='background-color: #FFF3E0; border-color: #FF9800;'>
-            <strong>AEF:LOC:0006</strong><br>
-            <strong>Products</strong><br>
-        """
-        
-        # Add elements
-        products_elements = project_data.get('Products_elements', [])
-        for element in products_elements:
-            products_html += f"<div class='element-item'>{element}</div>"
-        
-        # Add risks
-        products_risks = project_data.get('Products_risks', [])
-        for risk in products_risks:
-            products_html += f"<div class='risk-item'>⚠️ {risk}</div>"
-        
-        # Add mitigations
-        products_mitigations = project_data.get('Products_mitigations', [])
-        for mitigation in products_mitigations:
-            products_html += f"<div class='mitigation-item'>🛡️ {mitigation}</div>"
-        
-        products_html += "</div>"
-        st.markdown(products_html, unsafe_allow_html=True)
+        render_expandable_domain("Products", "AEF:LOC:0006", "business-domain", project_data)
     
-    # Services Domain
+    # Services Domain  
     with col2:
-        st.markdown("**Services Domain**")
-        services_html = """
-        <div class='domain-box' style='background-color: #FFF3E0; border-color: #FF9800;'>
-            <strong>AEF:LOC:0002</strong><br>
-            <strong>Services</strong><br>
-        """
-        
-        # Add elements
-        services_elements = project_data.get('Services_elements', [])
-        for element in services_elements:
-            services_html += f"<div class='element-item'>{element}</div>"
-        
-        # Add risks
-        services_risks = project_data.get('Services_risks', [])
-        for risk in services_risks:
-            services_html += f"<div class='risk-item'>⚠️ {risk}</div>"
-        
-        # Add mitigations
-        services_mitigations = project_data.get('Services_mitigations', [])
-        for mitigation in services_mitigations:
-            services_html += f"<div class='mitigation-item'>🛡️ {mitigation}</div>"
-        
-        services_html += "</div>"
-        st.markdown(services_html, unsafe_allow_html=True)
+        render_expandable_domain("Services", "AEF:LOC:0002", "business-domain", project_data)
     
     # Information Domain
     with col3:
-        st.markdown("**Information Domain**")
-        information_html = """
-        <div class='domain-box' style='background-color: #FFF3E0; border-color: #FF9800;'>
-            <strong>AEF:LOC:0003</strong><br>
-            <strong>Information</strong><br>
-        """
-        
-        # Add elements
-        information_elements = project_data.get('Information_elements', [])
-        for element in information_elements:
-            information_html += f"<div class='element-item'>{element}</div>"
-        
-        # Add risks
-        information_risks = project_data.get('Information_risks', [])
-        for risk in information_risks:
-            information_html += f"<div class='risk-item'>⚠️ {risk}</div>"
-        
-        # Add mitigations
-        information_mitigations = project_data.get('Information_mitigations', [])
-        for mitigation in information_mitigations:
-            information_html += f"<div class='mitigation-item'>🛡️ {mitigation}</div>"
-        
-        information_html += "</div>"
-        st.markdown(information_html, unsafe_allow_html=True)
+        render_expandable_domain("Information", "AEF:LOC:0003", "business-domain", project_data)
     
-    # Operational Layer with enhanced People domain
-    st.markdown("#### ⚙️ Operational Layer")
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Operational Layer
+    st.markdown("### Operational Layer")
+    
     col1, col2, col3 = st.columns(3)
     
-    # People Domain with dynamic elements
+    # People Domain
     with col1:
-        st.markdown("**People Domain**")
-        people_html = """
-        <div class='domain-box' style='background-color: #F3E5F5; border-color: #9C27B0;'>
-            <strong>AEF:LOC:0004</strong><br>
-            <strong>People</strong><br>
-        """
-        
-        # Add dynamic elements
-        people_elements = project_data.get('People_elements', ['Customer', 'User', 'Admin'])  # Default elements
-        for element in people_elements:
-            people_html += f"<div class='element-item'>{element}</div>"
-        
-        # Add risks
-        people_risks = project_data.get('People_risks', [])
-        for risk in people_risks:
-            people_html += f"<div class='risk-item'>⚠️ {risk}</div>"
-        
-        # Add mitigations
-        people_mitigations = project_data.get('People_mitigations', [])
-        for mitigation in people_mitigations:
-            people_html += f"<div class='mitigation-item'>🛡️ {mitigation}</div>"
-        
-        people_html += "</div>"
-        st.markdown(people_html, unsafe_allow_html=True)
+        render_expandable_domain("People", "AEF:LOC:0004", "operational-domain", project_data)
     
     # Process Domain
     with col2:
-        st.markdown("**Process Domain**")
-        process_html = """
-        <div class='domain-box' style='background-color: #F3E5F5; border-color: #9C27B0;'>
-            <strong>AEF:LOC:0005</strong><br>
-            <strong>Process</strong><br>
-        """
-        
-        # Add elements
-        process_elements = project_data.get('Process_elements', [])
-        for element in process_elements:
-            process_html += f"<div class='element-item'>{element}</div>"
-        
-        # Add risks
-        process_risks = project_data.get('Process_risks', [])
-        for risk in process_risks:
-            process_html += f"<div class='risk-item'>⚠️ {risk}</div>"
-        
-        # Add mitigations
-        process_mitigations = project_data.get('Process_mitigations', [])
-        for mitigation in process_mitigations:
-            process_html += f"<div class='mitigation-item'>🛡️ {mitigation}</div>"
-        
-        process_html += "</div>"
-        st.markdown(process_html, unsafe_allow_html=True)
+        render_expandable_domain("Process", "AEF:LOC:0005", "operational-domain", project_data)
     
     # Facilities Domain
     with col3:
-        st.markdown("**Facilities Domain**")
-        facilities_html = """
-        <div class='domain-box' style='background-color: #F3E5F5; border-color: #9C27B0;'>
-            <strong>AEF:LOC:0007</strong><br>
-            <strong>Facilities</strong><br>
-        """
-        
-        # Add elements
-        facilities_elements = project_data.get('Facilities_elements', [])
-        for element in facilities_elements:
-            facilities_html += f"<div class='element-item'>{element}</div>"
-        
-        # Add risks
-        facilities_risks = project_data.get('Facilities_risks', [])
-        for risk in facilities_risks:
-            facilities_html += f"<div class='risk-item'>⚠️ {risk}</div>"
-        
-        # Add mitigations
-        facilities_mitigations = project_data.get('Facilities_mitigations', [])
-        for mitigation in facilities_mitigations:
-            facilities_html += f"<div class='mitigation-item'>🛡️ {mitigation}</div>"
-        
-        facilities_html += "</div>"
-        st.markdown(facilities_html, unsafe_allow_html=True)
+        render_expandable_domain("Facilities", "AEF:LOC:0007", "operational-domain", project_data)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
     
     # Technology Layer
-    st.markdown("#### 💻 Information Technology Layer")
+    st.markdown("### Information Technology Layer")
+    
+    st.markdown("""
+    <div class="archimate-domain technology-domain" style="margin-bottom: 20px;">
+        <div class="domain-header">Information Technology</div>
+    """, unsafe_allow_html=True)
+    
     col1, col2, col3, col4 = st.columns(4)
     
     # Applications
     with col1:
-        st.markdown("**Applications**")
-        applications_html = """
-        <div class='domain-box' style='background-color: #C8E6C9; border-color: #4CAF50;'>
-            <strong>AEF:LOC:0016</strong><br>
-            <strong>Applications</strong><br>
-        """
-        
-        # Add elements
-        applications_elements = project_data.get('Applications_elements', [])
-        for element in applications_elements:
-            applications_html += f"<div class='element-item'>{element}</div>"
-        
-        # Add risks
-        applications_risks = project_data.get('Applications_risks', [])
-        for risk in applications_risks:
-            applications_html += f"<div class='risk-item'>⚠️ {risk}</div>"
-        
-        # Add mitigations
-        applications_mitigations = project_data.get('Applications_mitigations', [])
-        for mitigation in applications_mitigations:
-            applications_html += f"<div class='mitigation-item'>🛡️ {mitigation}</div>"
-        
-        applications_html += "</div>"
-        st.markdown(applications_html, unsafe_allow_html=True)
+        render_tech_subdomain("Applications", "AEF:LOC:0016", project_data)
     
     # Platforms
     with col2:
-        st.markdown("**Platforms**")
-        platforms_html = """
-        <div class='domain-box' style='background-color: #C8E6C9; border-color: #4CAF50;'>
-            <strong>AEF:LOC:0017</strong><br>
-            <strong>Platforms</strong><br>
-        """
-        
-        # Add elements
-        platforms_elements = project_data.get('Platforms_elements', [])
-        for element in platforms_elements:
-            platforms_html += f"<div class='element-item'>{element}</div>"
-        
-        # Add risks
-        platforms_risks = project_data.get('Platforms_risks', [])
-        for risk in platforms_risks:
-            platforms_html += f"<div class='risk-item'>⚠️ {risk}</div>"
-        
-        # Add mitigations
-        platforms_mitigations = project_data.get('Platforms_mitigations', [])
-        for mitigation in platforms_mitigations:
-            platforms_html += f"<div class='mitigation-item'>🛡️ {mitigation}</div>"
-        
-        platforms_html += "</div>"
-        st.markdown(platforms_html, unsafe_allow_html=True)
+        render_tech_subdomain("Platforms", "AEF:LOC:0017", project_data)
     
     # Network
     with col3:
-        st.markdown("**Network**")
-        network_html = """
-        <div class='domain-box' style='background-color: #C8E6C9; border-color: #4CAF50;'>
-            <strong>AEF:LOC:0018</strong><br>
-            <strong>Network</strong><br>
-        """
-        
-        # Add elements
-        network_elements = project_data.get('Network_elements', [])
-        for element in network_elements:
-            network_html += f"<div class='element-item'>{element}</div>"
-        
-        # Add risks
-        network_risks = project_data.get('Network_risks', [])
-        for risk in network_risks:
-            network_html += f"<div class='risk-item'>⚠️ {risk}</div>"
-        
-        # Add mitigations
-        network_mitigations = project_data.get('Network_mitigations', [])
-        for mitigation in network_mitigations:
-            network_html += f"<div class='mitigation-item'>🛡️ {mitigation}</div>"
-        
-        network_html += "</div>"
-        st.markdown(network_html, unsafe_allow_html=True)
+        render_tech_subdomain("Network", "AEF:LOC:0018", project_data)
     
     # Data
     with col4:
-        st.markdown("**Data**")
-        data_html = """
-        <div class='domain-box' style='background-color: #C8E6C9; border-color: #4CAF50;'>
-            <strong>AEF:LOC:0019</strong><br>
-            <strong>Data</strong><br>
-        """
-        
+        render_tech_subdomain("Data", "AEF:LOC:0019", project_data)
+    
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Interaction Controls
+    render_interaction_controls(project_data)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
+def render_expandable_domain(domain_name, domain_id, css_class, project_data):
+    """Render an expandable domain with inline editing capabilities"""
+    elements_key = f'{domain_name}_elements'
+    risks_key = f'{domain_name}_risks'
+    mitigations_key = f'{domain_name}_mitigations'
+    
+    # Initialize if not exists
+    if elements_key not in project_data:
+        project_data[elements_key] = ['Customer', 'User', 'Admin'] if domain_name == 'People' else []
+    if risks_key not in project_data:
+        project_data[risks_key] = []
+    if mitigations_key not in project_data:
+        project_data[mitigations_key] = []
+    
+    # Domain container
+    domain_html = f"""
+    <div class="archimate-domain {css_class}">
+        <div class="domain-header">{domain_id}<br>{domain_name}</div>
+    """
+    
+    # Elements section
+    if project_data[elements_key]:
+        domain_html += "<div style='margin-bottom: 10px;'>"
+        for element in project_data[elements_key]:
+            domain_html += f'<div class="domain-element">{element}</div>'
+        domain_html += "</div>"
+    
+    # Risks section
+    if project_data[risks_key]:
+        domain_html += "<div style='margin-bottom: 8px;'><strong style='font-size: 11px;'>Risks:</strong><br>"
+        for risk in project_data[risks_key]:
+            risk_desc = st.session_state.risks.get(risk, {}).get('description', risk)[:30]
+            domain_html += f'<div class="risk-element">⚠️ {risk}</div>'
+        domain_html += "</div>"
+    
+    # Mitigations section
+    if project_data[mitigations_key]:
+        domain_html += "<div style='margin-bottom: 8px;'><strong style='font-size: 11px;'>Mitigations:</strong><br>"
+        for mitigation in project_data[mitigations_key]:
+            mit_desc = st.session_state.mitigations.get(mitigation, {}).get('description', mitigation)[:30]
+            domain_html += f'<div class="mitigation-element">🛡️ {mitigation}</div>'
+        domain_html += "</div>"
+    
+    domain_html += "</div>"
+    
+    st.markdown(domain_html, unsafe_allow_html=True)
+    
+    # Inline editing controls
+    with st.expander(f"✏️ Edit {domain_name}", expanded=False):
         # Add elements
-        data_elements = project_data.get('Data_elements', [])
-        for element in data_elements:
-            data_html += f"<div class='element-item'>{element}</div>"
+        st.write("**Add Elements:**")
+        new_element = st.text_input(f"New element for {domain_name}", key=f"add_element_{domain_name}")
+        if st.button(f"Add Element", key=f"btn_add_{domain_name}"):
+            if new_element and new_element not in project_data[elements_key]:
+                project_data[elements_key].append(new_element)
+                st.success(f"Added {new_element}")
+                st.rerun()
+        
+        # Manage existing elements
+        if project_data[elements_key]:
+            st.write("**Current Elements:**")
+            for i, element in enumerate(project_data[elements_key]):
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.write(f"• {element}")
+                with col2:
+                    if st.button("🗑️", key=f"del_element_{domain_name}_{i}"):
+                        project_data[elements_key].remove(element)
+                        st.rerun()
         
         # Add risks
-        data_risks = project_data.get('Data_risks', [])
-        for risk in data_risks:
-            data_html += f"<div class='risk-item'>⚠️ {risk}</div>"
+        st.write("**Assign Risks:**")
+        available_risks = [k for k, v in st.session_state.risks.items() 
+                          if v.get('domain') == domain_name or v.get('domain') == '']
+        
+        if available_risks:
+            selected_risks = st.multiselect(
+                "Select risks",
+                available_risks,
+                default=project_data[risks_key],
+                key=f"risks_multi_{domain_name}",
+                format_func=lambda x: f"{x}: {st.session_state.risks[x]['description'][:40]}..."
+            )
+            project_data[risks_key] = selected_risks
         
         # Add mitigations
-        data_mitigations = project_data.get('Data_mitigations', [])
-        for mitigation in data_mitigations:
-            data_html += f"<div class='mitigation-item'>🛡️ {mitigation}</div>"
+        st.write("**Assign Mitigations:**")
+        available_mitigations = [k for k, v in st.session_state.mitigations.items() 
+                               if v.get('domain') == domain_name or v.get('domain') == '']
         
-        data_html += "</div>"
-        st.markdown(data_html, unsafe_allow_html=True)
-    
-    # Display selected interactions as visual connections
-    if project_data.get('selected_interactions'):
-        st.markdown("---")
-        st.markdown("#### 🔄 Active Interactions & Connections")
-        
-        for interaction in project_data['selected_interactions']:
-            source, target = interaction.split(' -> ')
-            
-            # Get risks and mitigations for this interaction
-            interaction_risks = [k for k, v in st.session_state.risks.items() 
-                               if v.get('interaction') == interaction]
-            interaction_mitigations = [k for k, v in st.session_state.mitigations.items() 
-                                     if any(risk in interaction_risks for risk in v.get('mapped_risks', []))]
-            
-            # Create visual representation
-            col1, col2, col3 = st.columns([1, 2, 1])
-            with col1:
-                st.markdown(f"""
-                <div style='background-color: #E3F2FD; padding: 10px; border-radius: 5px; text-align: center;'>
-                    <strong>{source}</strong>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col2:
-                connection_html = f"""
-                <div style='background-color: #F5F5F5; padding: 10px; border-radius: 5px; text-align: center;'>
-                    <strong>→ {interaction} →</strong><br>
-                """
-                
-                if interaction_risks:
-                    connection_html += "<br><strong>Risks:</strong><br>"
-                    for risk in interaction_risks:
-                        connection_html += f"<span class='risk-item'>⚠️ {risk}</span>"
-                
-                if interaction_mitigations:
-                    connection_html += "<br><strong>Mitigations:</strong><br>"
-                    for mitigation in interaction_mitigations:
-                        connection_html += f"<span class='mitigation-item'>🛡️ {mitigation}</span>"
-                
-                connection_html += "</div>"
-                st.markdown(connection_html, unsafe_allow_html=True)
-            
-            with col3:
-                st.markdown(f"""
-                <div style='background-color: #E8F5E8; padding: 10px; border-radius: 5px; text-align: center;'>
-                    <strong>{target}</strong>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            st.markdown("<br>", unsafe_allow_html=True)
+        if available_mitigations:
+            selected_mitigations = st.multiselect(
+                "Select mitigations",
+                available_mitigations,
+                default=project_data[mitigations_key],
+                key=f"mitigations_multi_{domain_name}",
+                format_func=lambda x: f"{x}: {st.session_state.mitigations[x]['description'][:40]}..."
+            )
+            project_data[mitigations_key] = selected_mitigations
 
-def admin_section():
-    """Enhanced admin section for managing risks and mitigations"""
-    st.header("🔧 Administration Panel")
+def render_tech_subdomain(subdomain_name, subdomain_id, project_data):
+    """Render technology subdomains"""
+    elements_key = f'{subdomain_name}_elements'
+    risks_key = f'{subdomain_name}_risks'
+    mitigations_key = f'{subdomain_name}_mitigations'
     
-    tab1, tab2 = st.tabs(["Risk Management", "Mitigation Management"])
+    # Initialize if not exists
+    if elements_key not in project_data:
+        project_data[elements_key] = []
+    if risks_key not in project_data:
+        project_data[risks_key] = []
+    if mitigations_key not in project_data:
+        project_data[mitigations_key] = []
     
-    with tab1:
-        st.subheader("Risk Database")
-        
-        # Add new risk
-        with st.expander("Add New Risk"):
-            col1, col2 = st.columns(2)
-            with col1:
-                risk_id = st.text_input("Risk ID", placeholder="ADV005")
-                risk_description = st.text_area("Risk Description")
-                risk_impact = st.selectbox("Impact Level", ["Low", "Medium", "High", "Critical"])
-            
-            with col2:
-                risk_interaction = st.selectbox("Associated Interaction", ["None"] + INTERACTIONS)
-                risk_domain = st.selectbox("Primary Domain", ["None"] + list(DOMAINS.keys()))
-            
-            if st.button("Add Risk"):
-                if risk_id and risk_description:
-                    st.session_state.risks[risk_id] = {
-                        'description': risk_description,
-                        'impact': risk_impact,
-                        'interaction': risk_interaction if risk_interaction != "None" else "",
-                        'domain': risk_domain if risk_domain != "None" else ""
-                    }
-                    st.success(f"Risk {risk_id} added successfully!")
-                    st.rerun()
-        
-        # Display existing risks with edit capability
-        st.subheader("Existing Risks")
-        if st.session_state.risks:
-            for risk_id, risk_info in st.session_state.risks.items():
-                with st.expander(f"Risk: {risk_id}"):
-                    col1, col2, col3 = st.columns([2, 1, 1])
-                    with col1:
-                        st.write(f"**Description:** {risk_info['description']}")
-                        st.write(f"**Impact:** {risk_info['impact']}")
-                        st.write(f"**Domain:** {risk_info.get('domain', 'None')}")
-                        st.write(f"**Interaction:** {risk_info.get('interaction', 'None')}")
-                    
-                    with col2:
-                        if st.button(f"Edit {risk_id}", key=f"edit_risk_{risk_id}"):
-                            st.session_state[f'editing_risk_{risk_id}'] = True
-                            st.rerun()
-                    
-                    with col3:
-                        if st.button(f"Delete {risk_id}", key=f"delete_risk_{risk_id}"):
-                            del st.session_state.risks[risk_id]
-                            st.success(f"Risk {risk_id} deleted!")
-                            st.rerun()
-        else:
-            st.info("No risks defined yet.")
+    # Subdomain container
+    subdomain_html = f"""
+    <div style="border: 1px solid #388E3C; border-radius: 4px; padding: 15px; margin: 5px; background: rgba(255,255,255,0.7); min-height: 180px;">
+        <div style="font-weight: bold; font-size: 12px; text-align: center; margin-bottom: 10px;">
+            {subdomain_id}<br>{subdomain_name}
+        </div>
+    """
     
-    with tab2:
-        st.subheader("Mitigation Database")
+    # Elements
+    if project_data[elements_key]:
+        for element in project_data[elements_key]:
+            subdomain_html += f'<div class="domain-element" style="font-size: 10px; padding: 4px; margin: 2px;">{element}</div>'
+    
+    # Risks
+    if project_data[risks_key]:
+        subdomain_html += "<br><div style='font-size: 10px; font-weight: bold;'>Risks:</div>"
+        for risk in project_data[risks_key]:
+            subdomain_html += f'<div class="risk-element" style="font-size: 9px;">⚠️ {risk}</div>'
+    
+    # Mitigations
+    if project_data[mitigations_key]:
+        subdomain_html += "<br><div style='font-size: 10px; font-weight: bold;'>Mitigations:</div>"
+        for mitigation in project_data[mitigations_key]:
+            subdomain_html += f'<div class="mitigation-element" style="font-size: 9px;">🛡️ {mitigation}</div>'
+    
+    subdomain_html += "</div>"
+    
+    st.markdown(subdomain_html, unsafe_allow_html=True)
+    
+    # Inline editing
+    with st.expander(f"✏️ {subdomain_name}", expanded=False):
+        # Add elements
+        new_element = st.text_input(f"Add to {subdomain_name}", key=f"add_{subdomain_name}")
+        if st.button(f"Add", key=f"btn_{subdomain_name}"):
+            if new_element and new_element not in project_data[elements_key]:
+                project_data[elements_key].append(new_element)
+                st.rerun()
         
-        # Add new mitigation
-        with st.expander("Add New Mitigation"):
-            col1, col2 = st.columns(2)
-            with col1:
-                mit_id = st.text_input("Mitigation ID", placeholder="MIT005")
-                mit_description = st.text_area("Mitigation Description")
-                mit_domain = st.selectbox("Implementation Domain", ["None"] + list(DOMAINS.keys()))
-            
-            with col2:
-                available_risks = list(st.session_state.risks.keys())
-                mapped_risks = st.multiselect("Mapped Risks", available_risks)
-                mit_interaction = st.selectbox("Associated Interaction", ["None"] + INTERACTIONS)
-            
-            if st.button("Add Mitigation"):
-                if mit_id and mit_description:
-                    st.session_state.mitigations[mit_id] = {
-                        'description': mit_description,
-                        'domain': mit_domain if mit_domain != "None" else "",
-                        'mapped_risks': mapped_risks,
-                        'interaction': mit_interaction if mit_interaction != "None" else ""
-                    }
-                    st.success(f"Mitigation {mit_id} added successfully!")
-                    st.rerun()
+        # Manage risks and mitigations
+        available_risks = [k for k, v in st.session_state.risks.items() 
+                          if v.get('domain') == subdomain_name]
+        if available_risks:
+            selected_risks = st.multiselect(
+                "Risks", available_risks, default=project_data[risks_key],
+                key=f"tech_risks_{subdomain_name}"
+            )
+            project_data[risks_key] = selected_risks
         
-        # Display existing mitigations with edit capability
-        st.subheader("Existing Mitigations")
-        if st.session_state.mitigations:
-            for mit_id, mit_info in st.session_state.mitigations.items():
-                with st.expander(f"Mitigation: {mit_id}"):
-                    col1, col2, col3 = st.columns([2, 1, 1])
-                    with col1:
-                        st.write(f"**Description:** {mit_info['description']}")
-                        st.write(f"**Domain:** {mit_info.get('domain', 'None')}")
-                        st.write(f"**Mapped Risks:** {', '.join(mit_info.get('mapped_risks', []))}")
-                        st.write(f"**Interaction:** {mit_info.get('interaction', 'None')}")
-                    
-                    with col2:
-                        if st.button(f"Edit {mit_id}", key=f"edit_mit_{mit_id}"):
-                            st.session_state[f'editing_mit_{mit_id}'] = True
-                            st.rerun()
-                    
-                    with col3:
-                        if st.button(f"Delete {mit_id}", key=f"delete_mit_{mit_id}"):
-                            del st.session_state.mitigations[mit_id]
-                            st.success(f"Mitigation {mit_id} deleted!")
-                            st.rerun()
-        else:
-            st.info("No mitigations defined yet.")
+        available_mitigations = [k for k, v in st.session_state.mitigations.items() 
+                               if v.get('domain') == subdomain_name]
+        if available_mitigations:
+            selected_mitigations = st.multiselect(
+                "Mitigations", available_mitigations, default=project_data[mitigations_key],
+                key=f"tech_mits_{subdomain_name}"
+            )
+            project_data[mitigations_key] = selected_mitigations
+
+def render_interaction_controls(project_data):
+    """Render interaction controls and visual connections"""
+    st.markdown("---")
+    st.markdown("### 🔄 Architecture Interactions")
+    
+    # Interaction selection
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        selected_interactions = st.multiselect(
+            "Select Active Interactions (ArchiMate Style)",
+            ARCHIMATE_INTERACTIONS,
+            default=project_data.get('selected_interactions', []),
+            help="Select interactions to show relationships between domains"
+        )
+        project_data['selected_interactions'] = selected_interactions
+    
+    with col2:
+        if st.button("🔄 Refresh Canvas"):
+            st.rerun()
+    
+    # Display active interactions with visual representation
+    if selected_interactions:
+        st.markdown("#### Active Interactions:")
+        
+        interaction_display = """
+        <div style='background: #F8F9FA; padding: 15px; border-radius: 8px; border: 1px solid #DEE2E6;'>
+        """
+        
+        for interaction in selected_interactions:
+            interaction_display += f"""
+            <div style='display: inline-block; background: white; border: 1px solid #6C757D; 
+                        border-radius: 20px; padding: 5px 15px; margin: 5px; font-size: 12px;'>
+                {interaction}
+            </div>
+            """
+        
+        interaction_display += "</div>"
+        st.markdown(interaction_display, unsafe_allow_html=True)
+        
+        # Visual connection representation
+        st.markdown("""
+        <div style='margin-top: 20px; padding: 15px; background: #FFF3CD; border-radius: 8px; border: 1px solid #FFEAA7;'>
+            <strong>📊 Visual Connections:</strong><br>
+            The selected interactions create relationships between architecture domains as shown in the canvas above.
+            Each interaction type (<<creates>>, <<manages>>, etc.) represents different architectural relationships
+            following ArchiMate modeling standards.
+        </div>
+        """, unsafe_allow_html=True)
 
 def project_management():
-    """Enhanced project management section with domain element management"""
+    """Streamlined project management focused on canvas work"""
     st.header("📁 Project Management")
     
     # Project selection/creation
-    col1, col2, col3 = st.columns([2, 1, 1])
+    col1, col2 = st.columns([3, 1])
     
     with col1:
         project_names = list(st.session_state.projects.keys()) if st.session_state.projects else []
         selected_project = st.selectbox(
-            "Select Project",
-            ["Create New Project..."] + project_names,
+            "Select or Create Project",
+            ["➕ Create New Project..."] + project_names,
             index=0 if not st.session_state.current_project else 
             project_names.index(st.session_state.current_project) + 1 if st.session_state.current_project in project_names else 0
         )
     
     with col2:
-        if st.button("🗑️ Delete Project", disabled=selected_project == "Create New Project..."):
+        if st.button("🗑️ Delete Project", disabled=selected_project == "➕ Create New Project..."):
             if selected_project in st.session_state.projects:
                 del st.session_state.projects[selected_project]
                 st.session_state.current_project = None
                 st.success(f"Project '{selected_project}' deleted!")
                 st.rerun()
     
-    if selected_project == "Create New Project...":
-        st.subheader("Create New Project")
+    if selected_project == "➕ Create New Project...":
+        st.subheader("🆕 Create New Project")
         
         col1, col2 = st.columns(2)
         with col1:
-            new_project_name = st.text_input("Project Name")
-            project_description = st.text_area("Project Description")
+            new_project_name = st.text_input("Project Name", placeholder="e.g., Customer Portal Security Architecture")
+            project_description = st.text_area("Project Description", placeholder="Brief description of the architecture project")
         
         with col2:
-            project_owner = st.text_input("Project Owner")
+            project_owner = st.text_input("Project Owner", placeholder="Your name")
             project_status = st.selectbox("Initial Status", ["Open", "In Progress", "Closed"])
         
-        if st.button("Create Project"):
+        if st.button("🚀 Create Project"):
             if new_project_name:
                 project_id = str(uuid.uuid4())[:8]
                 st.session_state.projects[new_project_name] = {
@@ -820,12 +586,8 @@ def project_management():
                     'status': project_status,
                     'created_date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     'selected_interactions': [],
-                    'risks': {},
-                    'mitigations': {},
-                    'risk_status': {},
-                    'mitigation_status': {},
-                    # Initialize domain elements
-                    'People_elements': ['Customer', 'User', 'Admin'],  # Default elements
+                    # Initialize all domain elements
+                    'People_elements': ['Customer', 'User', 'Admin'],
                     'Services_elements': [],
                     'Applications_elements': [],
                     'Network_elements': [],
@@ -834,23 +596,28 @@ def project_management():
                     'Products_elements': [],
                     'Process_elements': [],
                     'Facilities_elements': [],
-                    'Platforms_elements': []
+                    'Platforms_elements': [],
+                    # Initialize risks and mitigations
+                    'People_risks': [], 'Services_risks': [], 'Applications_risks': [], 'Network_risks': [],
+                    'Data_risks': [], 'Information_risks': [], 'Products_risks': [], 'Process_risks': [],
+                    'Facilities_risks': [], 'Platforms_risks': [],
+                    'People_mitigations': [], 'Services_mitigations': [], 'Applications_mitigations': [], 
+                    'Network_mitigations': [], 'Data_mitigations': [], 'Information_mitigations': [],
+                    'Products_mitigations': [], 'Process_mitigations': [], 'Facilities_mitigations': [], 
+                    'Platforms_mitigations': []
                 }
                 st.session_state.current_project = new_project_name
-                st.success(f"Project '{new_project_name}' created successfully!")
+                st.success(f"✅ Project '{new_project_name}' created successfully!")
                 st.rerun()
     
     else:
         st.session_state.current_project = selected_project
         project_data = st.session_state.projects[selected_project]
         
-        # Project details
-        st.subheader(f"Project: {selected_project}")
-        
+        # Project header info
         col1, col2, col3 = st.columns(3)
         with col1:
             st.metric("Project ID", project_data['id'])
-            st.write(f"**Owner:** {project_data['owner']}")
         with col2:
             new_status = st.selectbox("Status", ["Open", "In Progress", "Closed"], 
                                     index=["Open", "In Progress", "Closed"].index(project_data['status']))
@@ -858,135 +625,75 @@ def project_management():
                 project_data['status'] = new_status
                 st.rerun()
         with col3:
-            st.write(f"**Created:** {project_data['created_date']}")
+            st.write(f"**Owner:** {project_data['owner']}")
+            st.write(f"**Created:** {project_data['created_date'][:10]}")
         
-        st.write(f"**Description:** {project_data['description']}")
+        if project_data['description']:
+            st.info(f"📋 **Description:** {project_data['description']}")
         
-        # Tabs for different management aspects
-        tab1, tab2, tab3, tab4 = st.tabs(["Interactions & Canvas", "Domain Elements", "Risk Management", "Mitigation Management"])
+        st.markdown("---")
         
-        with tab1:
-            # Interaction selection
-            st.subheader("🔄 Interaction Selection")
-            selected_interactions = st.multiselect(
-                "Select Interactions for this Architecture",
-                INTERACTIONS,
-                default=project_data.get('selected_interactions', [])
-            )
-            project_data['selected_interactions'] = selected_interactions
-            
-            # Display the enhanced canvas
-            display_canvas_with_interactions(project_data)
+        # Main interactive canvas
+        render_interactive_canvas(project_data)
+
+def admin_section():
+    """Simplified admin section for managing master data"""
+    st.header("🔧 Administration")
+    
+    tab1, tab2 = st.tabs(["🚨 Risk Library", "🛡️ Mitigation Library"])
+    
+    with tab1:
+        st.subheader("Risk Library Management")
         
-        with tab2:
-            st.subheader("🏗️ Domain Element Management")
+        # Add new risk
+        with st.expander("➕ Add New Risk"):
+            col1, col2 = st.columns(2)
+            with col1:
+                risk_id = st.text_input("Risk ID", placeholder="ADV006")
+                risk_description = st.text_area("Risk Description")
+            with col2:
+                risk_impact = st.selectbox("Impact Level", ["Low", "Medium", "High", "Critical"])
+                risk_domain = st.selectbox("Primary Domain", 
+                    ["", "People", "Services", "Applications", "Network", "Data", "Information", "Products", "Process", "Facilities", "Platforms"])
             
-            # Create tabs for each major domain
-            domain_tabs = st.tabs(["People", "Services", "Applications", "Network", "Data", "Information", "Products", "Process", "Facilities", "Platforms"])
-            
-            domains_to_manage = ["People", "Services", "Applications", "Network", "Data", "Information", "Products", "Process", "Facilities", "Platforms"]
-            
-            for i, domain_name in enumerate(domains_to_manage):
-                with domain_tabs[i]:
-                    st.write(f"### {domain_name} Domain")
-                    
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        manage_domain_elements(domain_name, project_data)
-                    
-                    with col2:
-                        # Show current risks and mitigations for this domain
-                        domain_risks = project_data.get(f'{domain_name}_risks', [])
-                        domain_mitigations = project_data.get(f'{domain_name}_mitigations', [])
-                        
-                        if domain_risks:
-                            st.write("**Current Risks:**")
-                            for risk in domain_risks:
-                                st.write(f"• ⚠️ {risk}")
-                        
-                        if domain_mitigations:
-                            st.write("**Current Mitigations:**")
-                            for mitigation in domain_mitigations:
-                                st.write(f"• 🛡️ {mitigation}")
+            if st.button("➕ Add Risk"):
+                if risk_id and risk_description:
+                    st.session_state.risks[risk_id] = {
+                        'description': risk_description,
+                        'impact': risk_impact,
+                        'domain': risk_domain
+                    }
+                    st.success(f"✅ Risk {risk_id} added successfully!")
+                    st.rerun()
         
-        with tab3:
-            st.subheader("⚠️ Project Risk Management")
-            
-            # Risk assignment by domain
-            st.write("#### Assign Risks to Domains")
-            
-            domain_cols = st.columns(2)
-            domains_to_manage = ["People", "Services", "Applications", "Network", "Data", "Information", "Products", "Process", "Facilities", "Platforms"]
-            
-            for i, domain_name in enumerate(domains_to_manage):
-                with domain_cols[i % 2]:
-                    with st.expander(f"{domain_name} Domain Risks"):
-                        manage_domain_risks(domain_name, project_data, st.session_state.risks)
-            
-            # Interaction-based risk assignment
-            st.write("#### Risks by Interaction")
-            if selected_interactions:
-                for interaction in selected_interactions:
-                    with st.expander(f"Risks for: {interaction}"):
-                        interaction_risks = {k: v for k, v in st.session_state.risks.items() 
-                                           if v.get('interaction') == interaction}
-                        
-                        if interaction_risks:
-                            selected_interaction_risks = st.multiselect(
-                                f"Select risks for {interaction}",
-                                list(interaction_risks.keys()),
-                                key=f"interaction_risks_{interaction.replace(' ', '_').replace('->', '_to_')}",
-                                format_func=lambda x: f"{x}: {interaction_risks[x]['description'][:50]}..."
-                            )
-                            
-                            # Update project data
-                            interaction_key = f"interaction_risks_{interaction.replace(' ', '_').replace('->', '_to_')}"
-                            project_data[interaction_key] = selected_interaction_risks
-                        else:
-                            st.info(f"No risks available for interaction: {interaction}")
-        
-        with tab4:
-            st.subheader("🛡️ Project Mitigation Management")
-            
-            # Mitigation assignment by domain
-            st.write("#### Assign Mitigations to Domains")
-            
-            domain_cols = st.columns(2)
-            
-            for i, domain_name in enumerate(domains_to_manage):
-                with domain_cols[i % 2]:
-                    with st.expander(f"{domain_name} Domain Mitigations"):
-                        manage_domain_mitigations(domain_name, project_data, st.session_state.mitigations)
-            
-            # Interaction-based mitigation assignment
-            st.write("#### Mitigations by Interaction")
-            if selected_interactions:
-                for interaction in selected_interactions:
-                    with st.expander(f"Mitigations for: {interaction}"):
-                        interaction_mitigations = {k: v for k, v in st.session_state.mitigations.items() 
-                                                 if v.get('interaction') == interaction}
-                        
-                        if interaction_mitigations:
-                            selected_interaction_mitigations = st.multiselect(
-                                f"Select mitigations for {interaction}",
-                                list(interaction_mitigations.keys()),
-                                key=f"interaction_mitigations_{interaction.replace(' ', '_').replace('->', '_to_')}",
-                                format_func=lambda x: f"{x}: {interaction_mitigations[x]['description'][:50]}..."
-                            )
-                            
-                            # Update project data
-                            interaction_key = f"interaction_mitigations_{interaction.replace(' ', '_').replace('->', '_to_')}"
-                            project_data[interaction_key] = selected_interaction_mitigations
-                        else:
-                            st.info(f"No mitigations available for interaction: {interaction}")
+        # Display existing risks
+        if st.session_state.risks:
+            st.subheader("Current Risk Library")
+            for risk_id, risk_info in st.session_state.risks.items():
+                col1, col2, col3 = st.columns([3, 1, 1])
+                with col1:
+                    st.write(f"**{risk_id}:** {risk_info['description']}")
+                    st.caption(f"Impact: {risk_info['impact']} | Domain: {risk_info.get('domain', 'General')}")
+                with col2:
+                    if st.button("✏️ Edit", key=f"edit_risk_{risk_id}"):
+                        st.info("Edit functionality - to be implemented")
+                with col3:
+                    if st.button("🗑️ Delete", key=f"delete_mit_{mit_id}"):
+                        del st.session_state.mitigations[mit_id]
+                        st.success(f"Mitigation {mit_id} deleted!")
+                        st.rerun()
+                st.markdown("---")
 
 def dashboard():
-    """Enhanced dashboard showing project statistics"""
-    st.header("📊 Security Architecture Dashboard")
+    """Dashboard with project overview and statistics"""
+    st.header("📊 Architecture Dashboard")
     
     if not st.session_state.projects:
-        st.info("No projects created yet. Go to Project Management to create your first project.")
+        st.info("🚀 No projects yet. Create your first security architecture project to get started!")
+        
+        if st.button("➕ Create First Project"):
+            st.session_state.redirect_to_projects = True
+            st.rerun()
         return
     
     # Overall statistics
@@ -997,150 +704,257 @@ def dashboard():
     
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Total Projects", total_projects)
+        st.metric("📁 Total Projects", total_projects)
     with col2:
-        st.metric("Open Projects", open_projects)
+        st.metric("🟢 Open", open_projects)
     with col3:
-        st.metric("In Progress", in_progress_projects)
+        st.metric("🟡 In Progress", in_progress_projects)
     with col4:
-        st.metric("Closed Projects", closed_projects)
+        st.metric("🟢 Completed", closed_projects)
     
-    # Project status charts
-    st.subheader("📈 Project Analytics")
+    st.markdown("---")
     
-    col1, col2 = st.columns(2)
+    # Project overview table
+    st.subheader("📋 Project Overview")
     
-    with col1:
-        # Project status distribution
-        status_data = pd.DataFrame({
-            'Status': ['Open', 'In Progress', 'Closed'],
-            'Count': [open_projects, in_progress_projects, closed_projects]
-        })
+    project_data = []
+    domains = ["People", "Services", "Applications", "Network", "Data", "Information", "Products", "Process", "Facilities", "Platforms"]
+    
+    for project_name, project_info in st.session_state.projects.items():
+        # Count elements across domains
+        total_elements = sum(len(project_info.get(f'{domain}_elements', [])) for domain in domains)
+        # Count risks across domains
+        total_risks = sum(len(project_info.get(f'{domain}_risks', [])) for domain in domains)
+        # Count mitigations across domains
+        total_mitigations = sum(len(project_info.get(f'{domain}_mitigations', [])) for domain in domains)
+        # Count interactions
+        total_interactions = len(project_info.get('selected_interactions', []))
         
-        if status_data['Count'].sum() > 0:
-            st.subheader("Project Status Distribution")
-            st.bar_chart(status_data.set_index('Status'))
-    
-    with col2:
-        # Domain element statistics
-        domain_stats = {}
-        domains_to_analyze = ["People", "Services", "Applications", "Network", "Data", "Information", "Products", "Process", "Facilities", "Platforms"]
-        
-        for domain in domains_to_analyze:
-            total_elements = 0
-            for project_data in st.session_state.projects.values():
-                total_elements += len(project_data.get(f'{domain}_elements', []))
-            domain_stats[domain] = total_elements
-        
-        if any(count > 0 for count in domain_stats.values()):
-            st.subheader("Elements per Domain (All Projects)")
-            domain_df = pd.DataFrame(list(domain_stats.items()), columns=['Domain', 'Elements'])
-            domain_df = domain_df[domain_df['Elements'] > 0]  # Only show domains with elements
-            st.bar_chart(domain_df.set_index('Domain'))
-    
-    # Detailed project table with enhanced information
-    st.subheader("📋 Detailed Project Analysis")
-    project_details = []
-    
-    for project_name, project_data in st.session_state.projects.items():
-        # Count elements across all domains
-        total_elements = sum(len(project_data.get(f'{domain}_elements', [])) for domain in domains_to_analyze)
-        
-        # Count risks and mitigations across all domains
-        total_risks = sum(len(project_data.get(f'{domain}_risks', [])) for domain in domains_to_analyze)
-        total_mitigations = sum(len(project_data.get(f'{domain}_mitigations', [])) for domain in domains_to_analyze)
-        
-        project_details.append({
-            'Project': project_name,
-            'Status': project_data['status'],
-            'Owner': project_data['owner'],
-            'Interactions': len(project_data.get('selected_interactions', [])),
+        project_data.append({
+            'Project Name': project_name,
+            'Status': project_info['status'],
+            'Owner': project_info['owner'],
             'Elements': total_elements,
+            'Interactions': total_interactions,
             'Risks': total_risks,
             'Mitigations': total_mitigations,
-            'Created': project_data['created_date'][:10]  # Just the date part
+            'Created': project_info['created_date'][:10]
         })
     
-    if project_details:
-        details_df = pd.DataFrame(project_details)
-        st.dataframe(details_df, use_container_width=True)
+    if project_data:
+        df = pd.DataFrame(project_data)
+        st.dataframe(df, use_container_width=True)
     
-    # Risk and mitigation analysis
-    st.subheader("⚠️ Risk & Mitigation Analysis")
+    # Analytics section
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("📈 Project Status Distribution")
+        if total_projects > 0:
+            status_data = pd.DataFrame({
+                'Status': ['Open', 'In Progress', 'Closed'],
+                'Count': [open_projects, in_progress_projects, closed_projects]
+            })
+            st.bar_chart(status_data.set_index('Status'))
+        else:
+            st.info("No project data available")
+    
+    with col2:
+        st.subheader("🏗️ Elements by Domain")
+        domain_totals = {}
+        for domain in domains:
+            total = sum(len(project_info.get(f'{domain}_elements', [])) 
+                       for project_info in st.session_state.projects.values())
+            if total > 0:
+                domain_totals[domain] = total
+        
+        if domain_totals:
+            domain_df = pd.DataFrame(list(domain_totals.items()), columns=['Domain', 'Elements'])
+            st.bar_chart(domain_df.set_index('Domain'))
+        else:
+            st.info("No domain elements defined yet")
+    
+    # Risk and mitigation overview
+    st.markdown("---")
+    st.subheader("🚨 Security Overview")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        st.write("**Risk Impact Distribution**")
-        risk_impacts = [risk['impact'] for risk in st.session_state.risks.values()]
-        if risk_impacts:
-            impact_df = pd.DataFrame({'Impact': risk_impacts})
-            impact_counts = impact_df['Impact'].value_counts()
-            st.bar_chart(impact_counts)
+        st.write("**Risk Library Summary:**")
+        risk_by_impact = {}
+        for risk_info in st.session_state.risks.values():
+            impact = risk_info.get('impact', 'Unknown')
+            risk_by_impact[impact] = risk_by_impact.get(impact, 0) + 1
+        
+        if risk_by_impact:
+            for impact, count in risk_by_impact.items():
+                st.write(f"• {impact}: {count} risks")
         else:
-            st.info("No risks defined yet.")
+            st.info("No risks defined")
     
     with col2:
-        st.write("**Mitigation Coverage by Domain**")
-        mitigation_domains = [mit['domain'] for mit in st.session_state.mitigations.values() if mit.get('domain')]
-        if mitigation_domains:
-            mitigation_df = pd.DataFrame({'Domain': mitigation_domains})
-            mitigation_counts = mitigation_df['Domain'].value_counts()
-            st.bar_chart(mitigation_counts)
+        st.write("**Mitigation Library Summary:**")
+        mit_by_domain = {}
+        for mit_info in st.session_state.mitigations.values():
+            domain = mit_info.get('domain', 'General')
+            mit_by_domain[domain] = mit_by_domain.get(domain, 0) + 1
+        
+        if mit_by_domain:
+            for domain, count in mit_by_domain.items():
+                st.write(f"• {domain}: {count} mitigations")
         else:
-            st.info("No mitigations defined yet.")
+            st.info("No mitigations defined")
 
 def main():
     """Main application function"""
     initialize_session_state()
     
+    # Custom CSS for better visual appearance
+    st.markdown("""
+    <style>
+    .main-header {
+        background: linear-gradient(90deg, #1976D2, #388E3C);
+        color: white;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .sidebar .sidebar-content {
+        background: #F8F9FA;
+    }
+    
+    .metric-card {
+        background: white;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid #E0E0E0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Main header
+    st.markdown("""
+    <div class="main-header">
+        <h1>🛡️ Enterprise Security Architecture Canvas</h1>
+        <p>ArchiMate-based Security Architecture Modeling & Risk Management</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
     # Sidebar navigation
-    st.sidebar.title("🛡️ Security Architecture")
-    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🧭 Navigation")
     
     page = st.sidebar.selectbox(
-        "Navigate to:",
-        ["Dashboard", "Project Management", "Administration"]
+        "Select Page:",
+        ["🏠 Dashboard", "📁 Project Canvas", "🔧 Administration"],
+        format_func=lambda x: x.split(' ', 1)[1]  # Remove emoji from display
     )
     
     st.sidebar.markdown("---")
-    st.sidebar.info(
-        "**Enhanced Enterprise Security Architecture Canvas**\n\n"
-        "Features:\n"
-        "- 🏗️ Dynamic domain elements\n"
-        "- 🔄 Visual interaction mapping\n"
-        "- ⚠️ Risk assignment to domains\n"
-        "- 🛡️ Mitigation management\n"
-        "- 📊 Comprehensive analytics"
-    )
     
-    # Display current project info in sidebar if available
+    # Current project information in sidebar
     if st.session_state.current_project:
-        st.sidebar.markdown("---")
-        st.sidebar.markdown("### 📁 Current Project")
+        st.sidebar.markdown("### 📂 Current Project")
         st.sidebar.info(f"**{st.session_state.current_project}**")
         
-        project_data = st.session_state.projects[st.session_state.current_project]
-        st.sidebar.write(f"**Status:** {project_data['status']}")
-        st.sidebar.write(f"**Interactions:** {len(project_data.get('selected_interactions', []))}")
+        project_data = st.session_state.projects.get(st.session_state.current_project, {})
+        st.sidebar.write(f"**Status:** {project_data.get('status', 'Unknown')}")
+        st.sidebar.write(f"**Owner:** {project_data.get('owner', 'Unknown')}")
         
-        # Count total elements, risks, and mitigations
+        # Quick stats
         domains = ["People", "Services", "Applications", "Network", "Data", "Information", "Products", "Process", "Facilities", "Platforms"]
         total_elements = sum(len(project_data.get(f'{domain}_elements', [])) for domain in domains)
         total_risks = sum(len(project_data.get(f'{domain}_risks', [])) for domain in domains)
         total_mitigations = sum(len(project_data.get(f'{domain}_mitigations', [])) for domain in domains)
         
-        st.sidebar.write(f"**Elements:** {total_elements}")
-        st.sidebar.write(f"**Risks:** {total_risks}")
-        st.sidebar.write(f"**Mitigations:** {total_mitigations}")
+        st.sidebar.metric("Elements", total_elements)
+        st.sidebar.metric("Risks", total_risks)  
+        st.sidebar.metric("Mitigations", total_mitigations)
+        st.sidebar.metric("Interactions", len(project_data.get('selected_interactions', [])))
+    else:
+        st.sidebar.markdown("### 📂 No Active Project")
+        st.sidebar.info("Select or create a project to begin architecture modeling.")
     
-    # Main content based on selected page
-    if page == "Dashboard":
+    # Sidebar help and information
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("""
+    ### 💡 Quick Help
+    
+    **🏠 Dashboard**: Overview of all projects and security metrics
+    
+    **📁 Project Canvas**: Main workspace for architecture modeling:
+    - Create/select projects
+    - Design interactive canvas
+    - Add domain elements
+    - Map risks & mitigations
+    - Define interactions
+    
+    **🔧 Administration**: Manage master data:
+    - Risk library
+    - Mitigation library
+    """)
+    
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("""
+    <div style='text-align: center; color: #666; font-size: 12px;'>
+        <p>🎯 <strong>Enterprise Security Architecture Canvas</strong></p>
+        <p>ArchiMate-based modeling tool</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Main content routing
+    if page.startswith("🏠"):
         dashboard()
-    elif page == "Project Management":
+    elif page.startswith("📁"):
         project_management()
-    elif page == "Administration":
+    elif page.startswith("🔧"):
         admin_section()
 
 if __name__ == "__main__":
-    main()
+    main()("🗑️ Delete", key=f"delete_risk_{risk_id}"):
+                        del st.session_state.risks[risk_id]
+                        st.success(f"Risk {risk_id} deleted!")
+                        st.rerun()
+                st.markdown("---")
+    
+    with tab2:
+        st.subheader("Mitigation Library Management")
+        
+        # Add new mitigation
+        with st.expander("➕ Add New Mitigation"):
+            col1, col2 = st.columns(2)
+            with col1:
+                mit_id = st.text_input("Mitigation ID", placeholder="MIT006")
+                mit_description = st.text_area("Mitigation Description")
+            with col2:
+                mit_domain = st.selectbox("Implementation Domain", 
+                    ["", "People", "Services", "Applications", "Network", "Data", "Information", "Products", "Process", "Facilities", "Platforms"])
+                available_risks = list(st.session_state.risks.keys())
+                mapped_risks = st.multiselect("Addresses Risks", available_risks)
+            
+            if st.button("➕ Add Mitigation"):
+                if mit_id and mit_description:
+                    st.session_state.mitigations[mit_id] = {
+                        'description': mit_description,
+                        'domain': mit_domain,
+                        'mapped_risks': mapped_risks
+                    }
+                    st.success(f"✅ Mitigation {mit_id} added successfully!")
+                    st.rerun()
+        
+        # Display existing mitigations
+        if st.session_state.mitigations:
+            st.subheader("Current Mitigation Library")
+            for mit_id, mit_info in st.session_state.mitigations.items():
+                col1, col2, col3 = st.columns([3, 1, 1])
+                with col1:
+                    st.write(f"**{mit_id}:** {mit_info['description']}")
+                    st.caption(f"Domain: {mit_info.get('domain', 'General')} | Addresses: {', '.join(mit_info.get('mapped_risks', []))}")
+                with col2:
+                    if st.button("✏️ Edit", key=f"edit_mit_{mit_id}"):
+                        st.info("Edit functionality - to be implemented")
+                with col3:
+                    if st.button
