@@ -1527,6 +1527,9 @@ def project_management():
         
         with domains_tab:
             render_domain_details_view(project_data)
+        
+        # Project save controls
+        render_project_save_controls(selected_project, project_data)
 
 def render_domain_details_view(project_data):
     """Render detailed domain management view"""
