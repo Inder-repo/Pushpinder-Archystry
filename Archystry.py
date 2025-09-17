@@ -211,120 +211,110 @@ def render_interactive_visual_canvas(project_data):
                     st.rerun()
 
 def create_visual_canvas_html(project_data, show_details=True):
-    """Create visual canvas using HTML/CSS"""
+    """Create visual canvas using a simpler table-based approach"""
     
     connections = project_data.get('canvas_connections', [])
     
-    canvas_html = """
-    <div style="width: 100%; height: 600px; background: #F8F9FA; border: 2px solid #E0E0E0; border-radius: 12px; position: relative; overflow: hidden; margin: 20px 0;">
-        <h3 style="text-align: center; margin-top: 20px; color: #333;">Security Architecture Canvas - Visual View</h3>
+    st.markdown("#### Security Architecture Canvas - Visual View")
+    
+    # Create a simple grid-based representation
+    st.markdown("""
+    <div style="background: #F8F9FA; padding: 20px; border: 2px solid #E0E0E0; border-radius: 12px;">
+    """, unsafe_allow_html=True)
+    
+    # Enterprise Layer
+    st.markdown("**Enterprise Layer**")
+    col1, col2, col3 = st.columns(3)
+    with col2:
+        render_domain_node("Enterprise", DOMAIN_POSITIONS["Enterprise"]["color"], project_data, connections, show_details)
+    
+    st.markdown("---")
+    
+    # Business Layer
+    st.markdown("**Business Layer**")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        render_domain_node("Products", DOMAIN_POSITIONS["Products"]["color"], project_data, connections, show_details)
+    with col2:
+        render_domain_node("Services", DOMAIN_POSITIONS["Services"]["color"], project_data, connections, show_details)
+    with col3:
+        render_domain_node("Information", DOMAIN_POSITIONS["Information"]["color"], project_data, connections, show_details)
+    
+    st.markdown("---")
+    
+    # Application Layer  
+    st.markdown("**Application Layer**")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        render_domain_node("People", DOMAIN_POSITIONS["People"]["color"], project_data, connections, show_details)
+    with col2:
+        render_domain_node("Process", DOMAIN_POSITIONS["Process"]["color"], project_data, connections, show_details)
+    with col3:
+        render_domain_node("Facilities", DOMAIN_POSITIONS["Facilities"]["color"], project_data, connections, show_details)
+    
+    st.markdown("---")
+    
+    # Technology Layer
+    st.markdown("**Technology Layer**")
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        render_domain_node("Applications", DOMAIN_POSITIONS["Applications"]["color"], project_data, connections, show_details)
+    with col2:
+        render_domain_node("Platforms", DOMAIN_POSITIONS["Platforms"]["color"], project_data, connections, show_details)
+    with col3:
+        render_domain_node("Network", DOMAIN_POSITIONS["Network"]["color"], project_data, connections, show_details)
+    with col4:
+        render_domain_node("Data", DOMAIN_POSITIONS["Data"]["color"], project_data, connections, show_details)
+    
+    # Connection summary
+    if connections:
+        st.markdown("---")
+        st.markdown("**Active Connections:**")
+        
+        for conn in connections:
+            conn_type = conn['type'].replace('<<', '').replace('>>', '')
+            
+            if conn['risk']:
+                st.markdown(f"🔴 **{conn['source']}** {conn_type} **{conn['target']}** ⚠️ (Risk: {conn['risk']})")
+            elif conn['mitigation']:
+                st.markdown(f"🟢 **{conn['source']}** {conn_type} **{conn['target']}** 🛡️ (Mitigation: {conn['mitigation']})")
+            else:
+                st.markdown(f"🔵 **{conn['source']}** {conn_type} **{conn['target']}**")
+    
+    st.markdown("</div>", unsafe_allow_html=True)
+
+def render_domain_node(domain_name, color, project_data, connections, show_details):
+    """Render a single domain node"""
+    
+    elements_count = len(project_data.get(f'{domain_name}_elements', []))
+    risks_count = len(project_data.get(f'{domain_name}_risks', []))
+    mits_count = len(project_data.get(f'{domain_name}_mitigations', []))
+    connection_count = len([c for c in connections if c['source'] == domain_name or c['target'] == domain_name])
+    
+    # Create node styling
+    node_html = f"""
+    <div style="background: {color}; color: white; padding: 15px; border-radius: 12px; 
+                text-align: center; margin: 5px; min-height: 80px;
+                border: 3px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+        <h4 style="margin: 0; font-size: 14px;">{domain_name}</h4>
     """
     
-    # Add domain nodes
-    for domain, pos in DOMAIN_POSITIONS.items():
-        x_px = int(pos['x'] * 800)
-        y_px = int((1 - pos['y']) * 500) + 60
-        
-        elements_count = len(project_data.get(f'{domain}_elements', []))
-        risks_count = len(project_data.get(f'{domain}_risks', []))
-        mits_count = len(project_data.get(f'{domain}_mitigations', []))
-        
-        total_items = elements_count + risks_count + mits_count
-        node_size = max(60, min(100, 60 + total_items * 5))
-        
-        connection_count = len([c for c in connections if c['source'] == domain or c['target'] == domain])
-        
-        canvas_html += f"""
-        <div style="position: absolute; left: {x_px - node_size//2}px; top: {y_px - node_size//2}px; 
-                    width: {node_size}px; height: {node_size}px; 
-                    background: {pos['color']}; border-radius: 50%; 
-                    display: flex; align-items: center; justify-content: center; 
-                    color: white; font-weight: bold; font-size: 11px; 
-                    border: 3px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.2); 
-                    z-index: 10;">
-            {domain}
-        </div>
-        """
-        
-        if show_details:
-            canvas_html += f"""
-            <div style="position: absolute; left: {x_px - 40}px; top: {y_px + node_size//2 + 10}px; 
-                        background: white; padding: 4px 8px; border-radius: 8px; 
-                        border: 1px solid #DDD; font-size: 10px; color: #666; 
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                E:{elements_count} R:{risks_count} M:{mits_count}<br>
-                🔗:{connection_count}
-            </div>
-            """
-    
-    # Add connection lines
-    for conn in connections:
-        source_pos = DOMAIN_POSITIONS[conn['source']]
-        target_pos = DOMAIN_POSITIONS[conn['target']]
-        
-        x1 = int(source_pos['x'] * 800)
-        y1 = int((1 - source_pos['y']) * 500) + 60
-        x2 = int(target_pos['x'] * 800)
-        y2 = int((1 - target_pos['y']) * 500) + 60
-        
-        if conn['risk']:
-            line_color = '#FF6B6B'
-            line_style = 'dashed'
-            line_width = '3px'
-        elif conn['mitigation']:
-            line_color = '#4ECDC4'
-            line_style = 'solid'
-            line_width = '3px'
-        else:
-            line_color = '#95A5A6'
-            line_style = 'solid'
-            line_width = '2px'
-        
-        canvas_html += f"""
-        <div style="position: absolute; left: {min(x1, x2)}px; top: {min(y1, y2)}px; 
-                    width: {abs(x2-x1)}px; height: {abs(y2-y1)}px; 
-                    border-top: {line_width} {line_style} {line_color}; 
-                    transform-origin: top left; opacity: 0.8; z-index: 1;">
-        </div>
-        """
-        
-        mid_x = (x1 + x2) // 2
-        mid_y = (y1 + y2) // 2
-        
-        canvas_html += f"""
-        <div style="position: absolute; left: {mid_x - 30}px; top: {mid_y - 10}px; 
-                    background: white; padding: 2px 6px; border-radius: 4px; 
-                    border: 1px solid {line_color}; font-size: 9px; color: {line_color}; 
-                    z-index: 5;">
-            {conn['type'].replace('<<', '').replace('>>', '')}
+    if show_details:
+        node_html += f"""
+        <div style="font-size: 10px; margin-top: 5px; opacity: 0.9;">
+            📦 Elements: {elements_count}<br>
+            ⚠️ Risks: {risks_count}<br>
+            🛡️ Mitigations: {mits_count}<br>
+            🔗 Connections: {connection_count}
         </div>
         """
     
-    canvas_html += """
-    <div style="position: absolute; right: 20px; top: 60px; background: white; 
-                padding: 15px; border-radius: 8px; border: 1px solid #DDD; 
-                box-shadow: 0 4px 8px rgba(0,0,0,0.1); z-index: 10;">
-        <h4 style="margin: 0 0 10px 0; font-size: 12px;">Legend</h4>
-        <div style="margin-bottom: 5px;">
-            <span style="display: inline-block; width: 20px; height: 3px; background: #FF6B6B; 
-                         border-style: dashed; margin-right: 8px;"></span>
-            <span style="font-size: 10px;">Risk Connection</span>
-        </div>
-        <div style="margin-bottom: 5px;">
-            <span style="display: inline-block; width: 20px; height: 3px; background: #4ECDC4; 
-                         margin-right: 8px;"></span>
-            <span style="font-size: 10px;">Mitigation Connection</span>
-        </div>
-        <div>
-            <span style="display: inline-block; width: 20px; height: 2px; background: #95A5A6; 
-                         margin-right: 8px;"></span>
-            <span style="font-size: 10px;">General Connection</span>
-        </div>
-    </div>
-    </div>
-    """
+    node_html += "</div>"
     
-    st.markdown(canvas_html, unsafe_allow_html=True)
+    st.markdown(node_html, unsafe_allow_html=True)
 
 def dashboard():
     """Dashboard with project overview and statistics"""
